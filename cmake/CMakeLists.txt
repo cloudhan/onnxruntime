@@ -1101,6 +1101,11 @@ if (onnxruntime_USE_NUPHAR)
     list(APPEND ORT_PROVIDER_CMAKE_FLAGS -Donnxruntime_USE_NUPHAR=1)
     list(APPEND ONNXRUNTIME_PROVIDER_NAMES nuphar)
 endif()
+if (onnxruntime_USE_OPENCL)
+    list(APPEND ORT_PROVIDER_FLAGS -DUSE_OPENCL=1)
+    list(APPEND ORT_PROVIDER_CMAKE_FLAGS -Donnxruntime_USE_OPENCL=1)
+    list(APPEND ONNXRUNTIME_PROVIDER_NAMES opencl)
+endif()
 if (onnxruntime_USE_TVM)
     list(APPEND ORT_PROVIDER_FLAGS  -DUSE_TVM=1)
     list(APPEND ORT_PROVIDER_CMAKE_FLAGS -Donnxruntime_USE_TVM=1)
@@ -1210,11 +1215,6 @@ function(onnxruntime_configure_target target_name)
     set_target_properties(${target_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
     set_target_properties(${target_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO TRUE)
     set_target_properties(${target_name} PROPERTIES INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL TRUE)
-  endif()
-  
-  # Keep BinSkim happy
-  if(MSVC AND NOT onnxruntime_target_platform MATCHES "ARM")
-    target_link_options(${target_name} PRIVATE "/CETCOMPAT")
   endif()
 endfunction()
 
@@ -2054,4 +2054,3 @@ if (onnxruntime_ENABLE_EXTERNAL_CUSTOM_OP_SCHEMAS)
     COMMENT "Installing protobuf"
   )
 endif()
-
