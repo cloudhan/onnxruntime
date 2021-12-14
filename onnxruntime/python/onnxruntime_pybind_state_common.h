@@ -484,6 +484,7 @@ std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_Dnnl(i
 std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_OpenVINO(const OrtOpenVINOProviderOptions* params);
 std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_Nuphar(bool, const char*);
 std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_OpenCL();
+std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_OpenCL(bool use_fp16);
 #ifdef USE_TVM
 std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_Tvm(const TvmExecutionProviderInfo& info);
 std::shared_ptr<IExecutionProviderFactory> CreateExecutionProviderFactory_Tvm(const char* params);
