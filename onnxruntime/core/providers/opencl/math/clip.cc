@@ -59,7 +59,14 @@ ONNX_OPENCL_OPERATOR_KERNEL(
         .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
         .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
         .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
-    Clip6)
-
+    Clip6);
+ONNX_OPENCL_OPERATOR_KERNEL(
+    Clip,
+    12,
+    KernelDefBuilder()
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
+        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
+        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+    Clip6);
 }  // namespace opencl
 }  // namespace onnxruntime
