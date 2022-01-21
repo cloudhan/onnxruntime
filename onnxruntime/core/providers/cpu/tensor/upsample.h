@@ -148,7 +148,7 @@ class UpsampleBase {
   float extrapolation_value_;
   bool use_nearest2x_optimization_ = false;
 
-  std::vector<float> scales_;
+  mutable std::vector<float> scales_;
   std::vector<float> roi_;
   bool scales_cached_;
   bool roi_cached_;
