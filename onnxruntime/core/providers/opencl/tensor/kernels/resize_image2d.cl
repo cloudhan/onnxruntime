@@ -11,8 +11,8 @@ __kernel void ResizeBilinear2D(
     __private const int2 input_wh,      // spatial dimential, W and H in NCHW
     __private const int2 output_wh,     // spatial dimential, W and H in NCHW
     __private const float inv_scale_x,  // 1.0/scale_x
-    __private const float inv_scale_y   // 1.0/scale_y
-) {
+    __private const float inv_scale_y,  // 1.0/scale_y
+    __private const int trans_coord_mode) {
   const int output_cw_idx = get_global_id(0);
   const int output_bh_idx = get_global_id(1);
   if (output_cw_idx >= global_size.x || output_bh_idx >= global_size.y) return;
@@ -22,8 +22,10 @@ __kernel void ResizeBilinear2D(
   const int output_h_idx = output_bh_idx % output_wh.y;
 
   // compute with feature map coordinate for weights
-  FLOAT orig_coord_x = TRANS_COORD(HALF_PIXEL)((FLOAT)output_w_idx, (FLOAT)inv_scale_x, (FLOAT)output_wh.x, (FLOAT)input_wh.x);
-  FLOAT orig_coord_y = TRANS_COORD(HALF_PIXEL)((FLOAT)output_h_idx, (FLOAT)inv_scale_y, (FLOAT)output_wh.y, (FLOAT)input_wh.y);
+  FLOAT orig_coord_x;
+  FLOAT orig_coord_y;
+  TRANS_COORDS(trans_coord_mode, orig_coord_x, orig_coord_y, (FLOAT)output_w_idx, (FLOAT)output_h_idx, (FLOAT)inv_scale_x, (FLOAT)inv_scale_y, (FLOAT)output_wh.x, (FLOAT)output_wh.y, (FLOAT)input_wh.x, (FLOAT)input_wh.y);
+
   int x1 = (int)orig_coord_x;
   int y1 = (int)orig_coord_y;
   int x2 = (int)(orig_coord_x + 1);
@@ -59,8 +61,8 @@ __kernel void ResizeNearest2D(
     __private const int2 input_wh,      // spatial dimential, W and H in NCHW
     __private const int2 output_wh,     // spatial dimential, W and H in NCHW
     __private const float inv_scale_x,  // 1.0/scale_x
-    __private const float inv_scale_y   // 1.0/scale_y
-) {
+    __private const float inv_scale_y,  // 1.0/scale_y
+    __private const int trans_coord_mode) {
   const int output_cw_idx = get_global_id(0);
   const int output_bh_idx = get_global_id(1);
   if (output_cw_idx >= global_size.x || output_bh_idx >= global_size.y) return;
@@ -70,11 +72,12 @@ __kernel void ResizeNearest2D(
   const int output_h_idx = output_bh_idx % output_wh.y;
 
   // compute with feature map coordinate for weights
-  FLOAT orig_coord_x = TRANS_COORD(ASYMMETRIC)((FLOAT)output_w_idx, (FLOAT)inv_scale_x, (FLOAT)output_wh.x, (FLOAT)input_wh.x);
-  FLOAT orig_coord_y = TRANS_COORD(ASYMMETRIC)((FLOAT)output_h_idx, (FLOAT)inv_scale_y, (FLOAT)output_wh.y, (FLOAT)input_wh.y);
+  FLOAT orig_coord_x;
+  FLOAT orig_coord_y;
+  TRANS_COORDS(trans_coord_mode, orig_coord_x, orig_coord_y, (FLOAT)output_w_idx, (FLOAT)output_h_idx, (FLOAT)inv_scale_x, (FLOAT)inv_scale_y, (FLOAT)output_wh.x, (FLOAT)output_wh.y, (FLOAT)input_wh.x, (FLOAT)input_wh.y);
+
   int x1 = (int)orig_coord_x;
   int y1 = (int)orig_coord_y;
-
 
   x1 = clamp_to_edge(x1, input_wh.x - 1);
   y1 = clamp_to_edge(y1, input_wh.y - 1);
