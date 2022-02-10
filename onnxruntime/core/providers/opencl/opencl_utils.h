@@ -1,6 +1,10 @@
 #pragma once
 
 #include <CL/opencl.h>
+#ifdef CL3W_ENABLE
+#include <cl3w.h>
+#endif
+
 #include <Tracy.hpp>
 #include <TracyOpenCL.hpp>
 
@@ -88,13 +92,13 @@ class NDRange {
  public:
   NDRange() : size(0), values{0, 0, 0} {}
 
-  template<typename T>
+  template <typename T>
   explicit NDRange(T x) : size(1), values{static_cast<size_t>(x), 0, 0} {}
 
-  template<typename T1, typename T2>
+  template <typename T1, typename T2>
   NDRange(T1 x, T2 y) : size(2), values{static_cast<size_t>(x), static_cast<size_t>(y), 0} {}
 
-  template<typename T1, typename T2, typename T3>
+  template <typename T1, typename T2, typename T3>
   NDRange(T1 x, T2 y, T3 z) : size(3), values{static_cast<size_t>(x), static_cast<size_t>(y), static_cast<size_t>(z)} {}
 
   uint8_t Size() const { return size; }
@@ -217,12 +221,12 @@ class Image2DDesc : private std::pair<int64_t, int64_t> {
     ORT_ENFORCE(shape.NumDimensions() == 4);
     int64_t C_o = shape[0];
     int64_t C_i = shape[1];
-    //FIXME: asumme we only surpport window-size=4
+    // FIXME: asumme we only surpport window-size=4
     int64_t K_h = 4;
     int64_t K_w = 4;
-    return {CeilDiv(C_i, 4) * K_h, 16*CeilDiv(C_o, 4)};
+    return {CeilDiv(C_i, 4) * K_h, 16 * CeilDiv(C_o, 4)};
   }
-  
+
   static Image2DDesc PackFromDepthwiseConv2DWeight(const TensorShape& shape) {
     ORT_ENFORCE(shape.NumDimensions() == 4);
     int64_t C_o = shape[0];
@@ -373,7 +377,7 @@ class KernelLauncher {
   cl_uint err_index_;
 };
 
-std::unique_ptr<float, std::function<void(float*)>> mapImage2dToHost(const OpenCLExecutionProvider& exec, const Tensor& tensor, int width, int height, bool write=false);
+std::unique_ptr<float, std::function<void(float*)>> mapImage2dToHost(const OpenCLExecutionProvider& exec, const Tensor& tensor, int width, int height, bool write = false);
 std::unique_ptr<float, std::function<void(float*)>> mapImage2dToHost(const OpenCLExecutionProvider& exec, cl_mem image, int width, int height, bool write = false);
 }  // namespace opencl
 }  // namespace onnxruntime

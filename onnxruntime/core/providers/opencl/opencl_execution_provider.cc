@@ -79,6 +79,11 @@ std::shared_ptr<KernelRegistry> GetOpenCLKernelRegistry() {
 OpenCLExecutionProvider::OpenCLExecutionProvider(const OpenCLExecutionProviderInfo& info)
     : IExecutionProvider(kOpenCLExecutionProvider), use_fp16_(info.use_fp16) {
   Status status;
+#ifdef CL3W_ENABLE
+  if (cl3wInit() != CL3W_OK) {
+    ORT_THROW("cl3w initialization failure.");
+  }
+#endif
   ORT_THROW_IF_ERROR(InitOpenCLContext());
 #ifdef TRACY_ENABLE
   tracy_cl_ctx_ = TracyCLContext(ctx_, dev_);
