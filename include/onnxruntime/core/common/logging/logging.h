@@ -211,7 +211,7 @@ class Logger {
         id_{id},
         min_severity_{severity},
         filter_user_data_{filter_user_data},
-        max_vlog_level_{vlog_level} {  // disable unless logging VLOG messages
+        max_vlog_level_{vlog_level} {
   }
 
   /**
@@ -237,10 +237,10 @@ class Logger {
   }
 
   /**
-     Return the maximum VLOG level allowed.
+     Return the maximum VLOG level allowed. Disabled unless logging VLOG messages
   */
   int VLOGMaxLevel() const noexcept {
-    return max_vlog_level_;
+    return min_severity_ > Severity::kVERBOSE ? -1 : max_vlog_level_;
   }
 
   /**
