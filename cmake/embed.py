@@ -101,6 +101,12 @@ class OpenCLPreprocessor(Preprocessor):
 
         raise OutputDirective(Action.IgnoreAndPassThrough)
 
+    def get_dependencies(self):
+        dedup = set()
+        inc = [it.included_abspath for it in self.include_times]
+        inc = [i for i in inc if not (i in dedup or dedup.add(i))]
+        return inc
+
 
 if __name__ == "__main__":
     import argparse
@@ -114,6 +120,7 @@ if __name__ == "__main__":
                         choices=["cl"],
                         help="specify how to treat the input file")
     parser.add_argument("-I", action="append", default=None)
+    parser.add_argument("-M", action="store_true")
     parser.add_argument("--output", "-o", default=None, type=os.path.realpath)
 
     args = parser.parse_args()
@@ -125,6 +132,12 @@ if __name__ == "__main__":
     if args.x == "cl":
         clpp = OpenCLPreprocessor(args.I)
         clpp.parse(file_content.decode("utf8"), filename_relative_to_ort)
+        if args.M:
+            deps = clpp.get_dependencies()
+            for d in deps:
+                print(d)
+            exit(0)
+
         out = io.StringIO()
         clpp.write(out)
         file_content = out.getvalue()
