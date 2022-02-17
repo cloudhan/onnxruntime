@@ -5,24 +5,26 @@ import io
 import os
 import sys
 import pip
+import subprocess
 
 
-print("=============== pre-processing opencl kernel code")
 def install(package):
     if hasattr(pip, 'main'):
         pip.main(['install', package])
     elif hasattr(pip, '_internal') and hasattr(pip._internal, 'main'):
         pip._internal.main(['install', package])
     else:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'package'])
-while True:
+        subprocess.check_call(
+            [sys.executable, '-m', 'pip', 'install', 'package'])
+
+
+for i in range(2):
     try:
         from pcpp import Preprocessor, OutputDirective, Action
         break
     except ImportError:
-        print("===============try again install pcpp", sys.executable)
+        print("pip install pcpp")
         install('pcpp')
-
 
 template = """
 #ifndef CONTENT_NAME
@@ -77,7 +79,7 @@ class OpenCLPreprocessor(Preprocessor):
 
     def on_error(self, file, line, msg):
         super().on_error(file, line, msg)
-        if(self.return_code != 0):
+        if (self.return_code != 0):
             sys.exit(self.return_code)
 
     def on_comment(self, tok):
@@ -124,6 +126,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", "-o", default=None, type=os.path.realpath)
 
     args = parser.parse_args()
+    print("pre-processing", args.file)
 
     filename_relative_to_ort = compute_path(args.file)
     file_content = open(args.file, "rb").read()
