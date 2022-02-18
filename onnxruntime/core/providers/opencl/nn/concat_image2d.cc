@@ -40,11 +40,11 @@ class Concat final : public OpenCLKernel, public ConcatBase {
     Prepare p;
     auto status = PrepareForCompute(context, input_tensors, p);
     if (!status.IsOK())
-        return status;
+      return status;
 
     // Return at this point if output tensor is going to be empty
     if (p.output_num_elements == 0)
-        return Status::OK();
+      return Status::OK();
     if (is_stack_ || p.axis != 1) ORT_THROW("[CL] Concat does not support stack mode and only support channel-concat now");
     // Compute values to be placed in the output tensor
 
@@ -74,7 +74,7 @@ class Concat final : public OpenCLKernel, public ConcatBase {
               .setImage2Ds(*input_tensors[0], *input_tensors[1], *Y)
               .setInt2(C_in, C_out)
               .Launch(*exec_, {cout_blocks, W_out, N * H_out}));
-    } else{
+    } else {
       ORT_RETURN_IF_ERROR(
           KernelLauncher{GetKernel("ConcatChannel4X")}
               .setInt3(cout_blocks, W_out, N * H_out)

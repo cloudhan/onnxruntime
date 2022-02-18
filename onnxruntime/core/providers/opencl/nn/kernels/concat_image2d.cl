@@ -1,20 +1,14 @@
 // FIXME: LICENSE NOTICE:  adapted from TNN original BSD3.
-#define DEAL_NON_UNIFORM_DIM3(input1, input2, input3)                                             \
-    if (input1 >= global_size.x || input2 >= global_size.y || input3 >= global_size.z) { \
-        return;                                                                                   \
-    }
-
 __kernel void ConcatChannel(
-                             __private const int3 global_size,
-                             __read_only image2d_t input0,
-                             __read_only image2d_t input1,
-                             __write_only image2d_t output,
-                             __private const int2 i0_o_channel) {
+    __private const int3 global_size,
+    __read_only image2d_t input0,
+    __read_only image2d_t input1,
+    __write_only image2d_t output,
+    __private const int2 i0_o_channel) {
   const int channel_block_idx = get_global_id(0);
   const int width_idx = get_global_id(1);
   const int hb_idx = get_global_id(2);
-
-  DEAL_NON_UNIFORM_DIM3(channel_block_idx, width_idx, hb_idx);
+  if (channel_block_idx > global_size.x || width_idx >= global_size.y || hb_idx >= global_size.z) return;
 
   const int width = global_size.y;
   const int input1_channel = i0_o_channel.y - i0_o_channel.x;
@@ -24,7 +18,7 @@ __kernel void ConcatChannel(
   FLOAT4 data = 0;
   if (channel_block_idx < input0_channel_blk - 1) {
     data = RI_F(input0, (int2)(mad24(channel_block_idx, width, width_idx), hb_idx));
-  } else if(channel_block_idx == input0_channel_blk - 1) {
+  } else if (channel_block_idx == input0_channel_blk - 1) {
     FLOAT4 data0 = RI_F(input0, (int2)(mad24(channel_block_idx, width, width_idx), hb_idx));
     FLOAT4 data1 = RI_F(input1, (int2)(width_idx, hb_idx));
 #if CHANNEL0_MOD_4 == 1
@@ -48,23 +42,22 @@ __kernel void ConcatChannel(
 #else
     data = (FLOAT4)(data0.s1, data0.s2, data0.s3, data1.s0);
 #endif
-  } 
-  
+  }
+
   const int pos = mad24(channel_block_idx, width, width_idx);
   WI_F(output, (int2)(pos, hb_idx), data);
 }
 
 __kernel void ConcatChannel4X(
-                             __private const int3 global_size,
-                             __read_only image2d_t input0,
-                             __read_only image2d_t input1,
-                             __write_only image2d_t output,
-                             __private const int2 i0_o_channel) {
+    __private const int3 global_size,
+    __read_only image2d_t input0,
+    __read_only image2d_t input1,
+    __write_only image2d_t output,
+    __private const int2 i0_o_channel) {
   const int channel_block_idx = get_global_id(0);
   const int width_idx = get_global_id(1);
   const int hb_idx = get_global_id(2);
-
-  DEAL_NON_UNIFORM_DIM3(channel_block_idx, width_idx, hb_idx);
+  if (channel_block_idx > global_size.x || width_idx >= global_size.y || hb_idx >= global_size.z) return;
 
   const int width = global_size.y;
   const int input0_channel_blk = i0_o_channel.x >> 2;
@@ -74,7 +67,7 @@ __kernel void ConcatChannel4X(
   } else {
     const int input1_channel_idx = channel_block_idx - input0_channel_blk;
     data = RI_F(input1, (int2)(mad24(input1_channel_idx, width, width_idx), hb_idx));
-  } 
-  
+  }
+
   WI_F(output, (int2)(mad24(channel_block_idx, width, width_idx), hb_idx), data);
 }
