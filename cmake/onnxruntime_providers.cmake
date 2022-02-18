@@ -751,7 +751,6 @@ if (onnxruntime_USE_OPENCL)
 
   source_group(TREE ${ONNXRUNTIME_ROOT}/core FILES ${opencl_cc_srcs})
   onnxruntime_add_static_library(onnxruntime_providers_opencl ${opencl_cc_srcs})
-  target_compile_definitions(onnxruntime_providers_opencl PUBLIC "CL_TARGET_OPENCL_VERSION=120")
   target_include_directories(onnxruntime_providers_opencl PRIVATE ${ONNXRUNTIME_ROOT} INTERFACE ${opencl_target_dir})
   set_target_properties(onnxruntime_providers_opencl PROPERTIES
     LINKER_LANGUAGE CXX
@@ -762,6 +761,7 @@ if (onnxruntime_USE_OPENCL)
     target_link_libraries(onnxruntime_providers_opencl PUBLIC cl3w)
   else()
     find_package(OpenCL REQUIRED)
+    target_compile_definitions(onnxruntime_providers_opencl PUBLIC "CL_TARGET_OPENCL_VERSION=120")
     target_link_libraries(onnxruntime_providers_opencl PUBLIC OpenCL::OpenCL)
   endif()
   if(onnxruntime_ENABLE_TRACY)
