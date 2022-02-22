@@ -86,10 +86,24 @@ class Concat final : public OpenCLKernel, public ConcatBase {
   }
 };
 
+
 ONNX_OPERATOR_VERSIONED_KERNEL_EX(
     Concat,
     kOnnxDomain,
-    8, 11,
+    4, 10,
+    kOpenCLExecutionProvider,
+    KernelDefBuilder()
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
+        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
+        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1) /* W */
+        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+    Concat)
+
+
+ONNX_OPERATOR_VERSIONED_KERNEL_EX(
+    Concat,
+    kOnnxDomain,
+    11, 12,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
         .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
@@ -100,7 +114,7 @@ ONNX_OPERATOR_VERSIONED_KERNEL_EX(
 
 ONNX_OPENCL_OPERATOR_KERNEL(
     Concat,
-    12,
+    13,
     KernelDefBuilder()
         .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
         .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
