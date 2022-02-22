@@ -25,7 +25,7 @@ class GlobalAveragePool : public OpenCLKernel {
     auto rank = X_shape.NumDimensions();
     ORT_RETURN_IF(rank < 2, "rank error");
     ORT_RETURN_IF(rank != 4, "only supports NCHW tensor");
-    auto Y_shape(X_shape.Slice(0, 2).GetDimsAsVector());
+    TensorShapeVector Y_shape(X_shape.Slice(0, 2).AsShapeVector());
     Y_shape.resize(rank, 1);
     const auto* Y = context->Output(0, Y_shape);
     VLOG_CL_IMAGE2D("Input", X);

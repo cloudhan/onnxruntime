@@ -75,7 +75,7 @@ std::vector<uint32_t> Conv2dCommonLocalWS2D(std::vector<uint32_t>& gws,
 
   return lws;
 }
-Status CalWGSizeForWino(const Tensor* X, const Tensor* Y, const std::vector<int64_t>& P, std::vector<KernelUnitParam>& winokernel) {
+Status CalWGSizeForWino(const Tensor* X, const Tensor* Y, const ConvAttributes::ConvPadVector& P, std::vector<KernelUnitParam>& winokernel) {
   const auto& input_dims = X->Shape();
   const auto& output_dims = Y->Shape();
 
@@ -140,26 +140,26 @@ class Conv : public OpenCLKernel {
     auto co_per_group = co_total / attrs_.group;
     auto ci_per_group = W->Shape()[1];
 
-    std::vector<int64_t> K;
+    TensorShapeVector K;
     ORT_RETURN_IF_ERROR(attrs_.ComputeKernelShape(W->Shape(), K));
 
     auto rank = K.size();
-    std::vector<int64_t> P(attrs_.pads);
+    ConvAttributes::ConvPadVector P(attrs_.pads);
     if (P.empty()) {
       P.resize(rank * 2, 0);
     }
-    std::vector<int64_t> D(attrs_.dilations);
+    TensorShapeVector D(attrs_.dilations);
     if (D.empty()) {
       D.resize(rank, 1);
     }
-    std::vector<int64_t> S(attrs_.strides);
+    TensorShapeVector S(attrs_.strides);
     if (S.empty()) {
       S.resize(rank, 1);
     }
 
-    std::vector<int64_t> Y_spatial_shape;
+    TensorShapeVector Y_spatial_shape;
     ORT_RETURN_IF_ERROR(attrs_.InferOutputShape(X->Shape().Slice(2), K, S, D, P, Y_spatial_shape));
-    std::vector<int64_t> Y_shape;
+    TensorShapeVector Y_shape;
     Y_shape.reserve(2 + rank);
     Y_shape.insert(Y_shape.end(), {N, co_total});
     Y_shape.insert(Y_shape.end(), Y_spatial_shape.begin(), Y_spatial_shape.end());
@@ -187,15 +187,15 @@ class Conv : public OpenCLKernel {
                          const Tensor* W,
                          const Tensor* B,
                          Tensor* Y,
-                         const std::vector<int64_t>& K,
-                         const std::vector<int64_t>& S,
-                         const std::vector<int64_t>& P,
-                         const std::vector<int64_t>& D,
+                         const TensorShapeVector& K,
+                         const TensorShapeVector& S,
+                         const ConvAttributes::ConvPadVector& P,
+                         const TensorShapeVector& D,
                          const int group) const {
     ZoneScopedN("DepthwiseConv2D");
     VLOGS_DEFAULT(0) << "[CL] DepthwiseConv2D, X:" << X->Shape() << " W:" << W->Shape()
                      << " B:" << (B ? B->Shape() : TensorShape{}) << " Y:" << Y->Shape()
-                     << " K:" << K << " S:" << S << " P:" << P << " D:" << D << " group:" << group;
+                     << " K:" << K << " S:" << S << " P:" << TensorShape{P} << " D:" << D << " group:" << group;
 
     auto C_in = X->Shape()[1];
     auto H_in = X->Shape()[2];
@@ -255,10 +255,10 @@ class Conv : public OpenCLKernel {
                         const Tensor* W,
                         const Tensor* B,
                         Tensor* Y,
-                        const std::vector<int64_t>& K,
-                        const std::vector<int64_t>& S,
-                        const std::vector<int64_t>& P,
-                        const std::vector<int64_t>& D,
+                        const TensorShapeVector& K,
+                        const TensorShapeVector& S,
+                        const ConvAttributes::ConvPadVector& P,
+                        const TensorShapeVector& D,
                         const int group) const {
     cl_int ret = CL_SUCCESS;
     const auto& xshape = X->Shape();
@@ -326,15 +326,15 @@ class Conv : public OpenCLKernel {
                 const Tensor* W,
                 const Tensor* B,
                 Tensor* Y,
-                const std::vector<int64_t>& K,
-                const std::vector<int64_t>& S,
-                const std::vector<int64_t>& P,
-                const std::vector<int64_t>& D,
+                const TensorShapeVector& K,
+                const TensorShapeVector& S,
+                const ConvAttributes::ConvPadVector& P,
+                const TensorShapeVector& D,
                 const int group) const {
     ZoneScopedN("Conv2D");
     VLOGS_DEFAULT(0) << "[CL] Conv2D, X:" << X->Shape() << " W:" << W->Shape()
                      << " B:" << (B ? B->Shape() : TensorShape{}) << " Y:" << Y->Shape()
-                     << " K:" << K << " S:" << S << " P:" << P << " D:" << D << " group:" << group;
+                     << " K:" << K << " S:" << S << " P:" << TensorShape{P} << " D:" << D << " group:" << group;
     ORT_ENFORCE(group == 1, "group != 1 is not supported currently in Conv2D");
 
     const auto& xshape = X->Shape();

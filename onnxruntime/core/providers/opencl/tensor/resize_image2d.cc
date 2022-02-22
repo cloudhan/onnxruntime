@@ -31,7 +31,7 @@ class Resize : public OpenCLKernel, UpsampleBase {
     const auto& X_shape = X->Shape();
     ORT_RETURN_IF(X_shape.NumDimensions() != 4, "only support 4D NCHW input");
 
-    std::vector<int64_t> Y_shape(X->Shape().GetDims().size());
+    TensorShapeVector Y_shape(X->Shape().GetDims().size());
     if (scales_.empty()) {
       const auto* scales = context->Input<Tensor>(scales_input_idx_);
       const auto* sizes = context->Input<Tensor>(sizes_input_idx_);

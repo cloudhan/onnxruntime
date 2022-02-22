@@ -30,8 +30,8 @@ class MaxPool : public OpenCLKernel {
     const auto& X_shape = X->Shape();
     ORT_RETURN_IF(X_shape.NumDimensions() != 4, "Input dimension must be 4, aka, NCHW tensor");
 
-    std::vector<int64_t> pads = attrs_.pads;
-    std::vector<int64_t> Y_shape = attrs_.SetOutputSize(X_shape, X_shape[1], &pads);
+    TensorShapeVector pads = attrs_.pads;
+    TensorShapeVector Y_shape = attrs_.SetOutputSize(X_shape, X_shape[1], &pads);
     const auto* Y = context->Output(0, Y_shape);
     VLOG_CL_IMAGE2D("Input", X);
     VLOG_CL_IMAGE2D("Output", Y);
