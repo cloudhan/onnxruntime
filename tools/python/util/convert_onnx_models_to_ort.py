@@ -60,7 +60,7 @@ def _create_session_options(optimization_level: ort.GraphOptimizationLevel,
     return so
 
 
-def _convert(model_path_or_dir: pathlib.Path, optimization_level_str: str, use_nnapi: bool, use_coreml: bool,
+def _convert(model_path_or_dir: pathlib.Path, optimization_level_str: str, providers: typing.List[str],
              custom_op_library: pathlib.Path, create_optimized_onnx_model: bool, allow_conversion_failures: bool,
              target_platform: str, session_options_config_entries: typing.Dict[str, str]):
 
@@ -77,14 +77,6 @@ def _convert(model_path_or_dir: pathlib.Path, optimization_level_str: str, use_n
 
     if len(models) == 0:
         raise ValueError("No .onnx files were found in '{}'".format(model_path_or_dir))
-
-    providers = ['CPUExecutionProvider']
-    if use_nnapi:
-        # providers are priority based, so register NNAPI first
-        providers.insert(0, 'NnapiExecutionProvider')
-    if use_coreml:
-        # providers are priority based, so register CoreML first
-        providers.insert(0, 'CoreMLExecutionProvider')
 
     # if the optimization level is 'all' we manually exclude the NCHWc transformer. It's not applicable to ARM
     # devices, and creates a device specific model which won't run on all hardware.
@@ -165,6 +157,12 @@ def parse_args():
                              'CoreML execution provider takes, in order to preserve those nodes in the ORT format '
                              'model.')
 
+    parser.add_argument('--use_opencl', action='store_true',
+                        help='Enable the OpenCL Execution Provider when creating models and determining required '
+                             'operators. Note that this will limit the optimizations possible on nodes that the '
+                             'OpenCL execution provider takes, in order to preserve those nodes in the ORT format '
+                             'model.')
+
     parser.add_argument('--optimization_level', default=['basic', 'all'], nargs='+',
                         choices=['disable', 'basic', 'extended', 'all'],
                         help="Level to optimize ONNX model with, prior to converting to ORT format model. "
@@ -229,6 +227,19 @@ def convert_onnx_models_to_ort():
     if args.use_coreml and 'CoreMLExecutionProvider' not in ort.get_available_providers():
         raise ValueError('The CoreML Execution Provider was not included in this build of ONNX Runtime.')
 
+    if args.use_opencl and 'OpenCLExecutionProvider' not in ort.get_available_providers():
+        raise ValueError('The OpenCL Execution Provider was not included in this build of ONNX Runtime.')
+
+    providers = []
+    if args.use_nnapi:
+        providers.append('NnapiExecutionProvider')
+    if args.use_coreml:
+        providers.append('CoreMLExecutionProvider')
+    if args.use_opencl:
+        providers.append('OpenCLExecutionProvider')
+    # providers are priority based, so register CPU last
+    providers.append('CPUExecutionProvider')
+
     session_options_config_entries = {}
 
     if args.nnapi_partitioning_stop_ops is not None:
@@ -241,7 +252,7 @@ def convert_onnx_models_to_ort():
 
     for optimization_level in args.optimization_level:
         print(f"Converting models and creating configuration file for optimization level '{optimization_level}'")
-        _convert(model_path_or_dir, optimization_level, args.use_nnapi, args.use_coreml, custom_op_library,
+        _convert(model_path_or_dir, optimization_level, providers, custom_op_library,
                  args.save_optimized_onnx_model, args.allow_conversion_failures, args.target_platform,
                  session_options_config_entries)
 
