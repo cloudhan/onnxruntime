@@ -11,10 +11,6 @@
 #include "core/providers/providers.h"
 #include "core/graph/constants.h"
 
-#if defined(ORT_MINIMAL_BUILD) && !defined(ORT_EXTENDED_MINIMAL_BUILD)
-#error extended minimal_build if required for OpenCL EP
-#endif
-
 namespace onnxruntime {
 
 // Information needed to construct OpenCL execution providers.
@@ -34,10 +30,6 @@ class OpenCLExecutionProvider : public IExecutionProvider {
 
   std::shared_ptr<KernelRegistry> GetKernelRegistry() const override;
   std::unique_ptr<onnxruntime::IDataTransfer> GetDataTransfer() const override;
-#ifdef ORT_EXTENDED_MINIMAL_BUILD
-  std::vector<std::unique_ptr<ComputeCapability>> GetCapability(const onnxruntime::GraphViewer& graph_viewer,
-                                    const std::vector<const KernelRegistry*>& kernel_registries) const override;
-#endif
   void RegisterAllocator(std::shared_ptr<AllocatorManager> allocator_manager) override;
 
   cl_device_id GetOpenCLDevice() const { return dev_; }
@@ -71,10 +63,9 @@ class OpenCLExecutionProvider : public IExecutionProvider {
 
 #ifdef TRACY_ENABLE
   TracyCLCtx tracy_cl_ctx_;
-
  public:
-  TracyCLCtx GetTracyCLContext() { return tracy_cl_ctx_; }
-  const std::remove_pointer_t<TracyCLCtx>* GetTracyCLContext() const { return tracy_cl_ctx_; }
+    TracyCLCtx GetTracyCLContext() { return tracy_cl_ctx_; }
+    const std::remove_pointer_t<TracyCLCtx>* GetTracyCLContext() const { return tracy_cl_ctx_; }
 #endif
 };
 

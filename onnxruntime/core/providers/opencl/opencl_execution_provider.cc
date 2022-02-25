@@ -5,12 +5,10 @@
 #include "opencl_allocator.h"
 #include "opencl_kernel_holder.h"
 #include "opencl_data_transfer.h"
-#include "opencl_ep_helper.h"
 #include "core/common/logging/logging.h"
 #include "core/framework/kernel_registry.h"
 #include "core/framework/op_kernel.h"
-#include "core/framework/compute_capability.h"
-#include "core/providers/partitioning_utils.h"
+
 #include <array>
 #include <utility>
 
@@ -116,26 +114,6 @@ std::shared_ptr<KernelRegistry> OpenCLExecutionProvider::GetKernelRegistry() con
   return kernel_registry;
 }
 
-#ifdef ORT_EXTENDED_MINIMAL_BUILD
-std::vector<std::unique_ptr<ComputeCapability>>
-OpenCLExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph_viewer,
-                                       const std::vector<const KernelRegistry*>& /*kernel_registries*/) const {
-  if (graph_viewer.IsSubgraph()) {
-    return {};
-  }
-  auto supported_nodes = opencl::SupportedNodeHelper{opencl::GetOpenCLKernelRegistry().get(), GetLogger()}
-                             .GetSupportedNodes(graph_viewer);
-
-  std::vector<std::unique_ptr<ComputeCapability>> result;
-  for (auto& node : supported_nodes) {
-    auto sub_graph = std::make_unique<IndexedSubGraph>();
-    sub_graph->nodes.push_back(node->Index());
-    result.emplace_back(std::make_unique<ComputeCapability>(std::move(sub_graph)));
-  }
-  return result;
-}
-#endif
-
 Status OpenCLExecutionProvider::InitOpenCLContext() {
   cl_uint num_platforms;
   ORT_RETURN_IF_CL_ERROR(clGetPlatformIDs(0, nullptr, &num_platforms));
@@ -153,8 +131,7 @@ Status OpenCLExecutionProvider::InitOpenCLContext() {
     ORT_RETURN_IF_CL_ERROR(clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, vendor.size(), vendor.data(), nullptr));
     std::cout << "[CL] platform vendor: " << vendor << "\n";
     if (vendor == "Oclgrind") {
-      std::cout << "[CL] platform " << vendor << " selected"
-                << "\n";
+      std::cout << "[CL] platform " << vendor << " selected" << "\n";
       selected_platform_idx = 1;
       break;
     }
