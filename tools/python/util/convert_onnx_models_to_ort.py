@@ -233,7 +233,7 @@ def convert_onnx_models_to_ort():
     if args.use_opencl:
         providers.append('OpenCLExecutionProvider')
     # providers are priority based, so register CPU last
-    providers = ['CPUExecutionProvider']
+    providers.append('CPUExecutionProvider')
 
     session_options_config_entries = {}
 
