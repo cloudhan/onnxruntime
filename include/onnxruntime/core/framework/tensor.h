@@ -16,7 +16,6 @@
 #include "onnxruntime_config.h"
 #include "core/framework/data_types.h"
 #include "core/framework/data_types_internal.h"
-#include "core/framework/tensor_usage.h"
 
 struct OrtValue;
 
@@ -245,15 +244,6 @@ class Tensor final {
   */
   size_t SizeInBytes() const;
 
-  // FIXME: doc
-  inline TensorUsage Usage() {
-    return usage_;
-  }
-
-  inline void SetUsage(TensorUsage usage) {
-    usage_ = usage;
-  }
-
   // More API methods.
  private:
   void Init(MLDataType p_type,
@@ -276,7 +266,6 @@ class Tensor final {
   const PrimitiveDataTypeBase* dtype_;
   OrtMemoryInfo alloc_info_;
   ptrdiff_t byte_offset_;
-  TensorUsage usage_ = TensorUsage::Generic;
 };
 #ifdef __GNUC__
 #pragma GCC diagnostic pop

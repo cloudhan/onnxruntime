@@ -42,7 +42,6 @@
 #include "core/optimizer/selectors_actions/selector_action_transformer_apply_contexts.h"
 #include "core/optimizer/transformer_memcpy.h"
 #include "core/optimizer/transpose_optimizer/optimizer_utils.h"
-#include "core/optimizer/annotate_node_arg.h"
 #include "core/platform/Barrier.h"
 #include "core/platform/ort_mutex.h"
 #include "core/platform/threadpool.h"
@@ -957,9 +956,6 @@ common::Status InferenceSession::TransformGraph(onnxruntime::Graph& graph,
   // Insert copy node/s.
   MemcpyTransformer copy_transformer{provider_types, kernel_registry_manager};
   ORT_RETURN_IF_ERROR_SESSIONID_(copy_transformer.Apply(graph, modified, *session_logger_));
-
-  AnnotateNodeArg annotate_node_arg{kernel_registry_manager};
-  ORT_RETURN_IF_ERROR_SESSIONID_(annotate_node_arg.Apply(graph, modified, *session_logger_));
 
   return common::Status::OK();
 }

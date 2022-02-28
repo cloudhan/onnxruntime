@@ -9,7 +9,6 @@
 #include "core/graph/basic_types.h"
 #include "core/common/status.h"
 #include "core/common/logging/logging.h"
-#include "core/framework/tensor_usage.h"
 
 namespace onnxruntime {
 
@@ -72,16 +71,8 @@ class NodeArg {
 
   bool HasMemoryType() const;
 
-  // this arg is used for conv weight/ depthwise conv weight lstm....
-  // FIXME: doc string
-  TensorUsage Usage() const;
-
-  void SetUsage(TensorUsage);
-
-  bool HasUsage() const;
-
-
 #if !defined(ORT_MINIMAL_BUILD) || defined(ORT_ENABLE_RUNTIME_OPTIMIZATION_IN_MINIMAL_BUILD)
+
   /** Sets the shape.
   @remarks Shape can only be set if the TypeProto was provided to the ctor, or #SetType has been called,
   as the shape information is stored as part of TypeProto. */
@@ -151,8 +142,5 @@ class NodeArg {
   bool has_mem_type_;
   // FIXME: typing
   int8_t mem_type_;
-
-  std::optional<TensorUsage> usage_;
-
 };
 }  // namespace onnxruntime
