@@ -423,22 +423,14 @@ ONNX_OPERATOR_VERSIONED_KERNEL_EX(
     1, 10,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)   /* X */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1)   /* W */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 2)   /* B */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0), /* Y */
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Conv);
 
 ONNX_OPENCL_OPERATOR_KERNEL(
     Conv,
     11,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)   /* X */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1)   /* W */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 2)   /* B */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0), /* Y */
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Conv);
 
 ONNX_OPERATOR_KERNEL_EX(
@@ -447,11 +439,7 @@ ONNX_OPERATOR_KERNEL_EX(
     1,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)   /* X */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1)   /* W */
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 2)   /* B */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0), /* Y */
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Conv                                                              // register the Conv OpKernel as the FusedConv impl
 );
 

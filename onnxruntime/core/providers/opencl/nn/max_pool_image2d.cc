@@ -74,18 +74,14 @@ ONNX_OPERATOR_VERSIONED_KERNEL_EX(
     8, 11,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     MaxPool)
 
 ONNX_OPENCL_OPERATOR_KERNEL(
     MaxPool,
     12,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     MaxPool)
 
 }  // namespace opencl

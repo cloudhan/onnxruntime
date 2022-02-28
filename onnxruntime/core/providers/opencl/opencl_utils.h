@@ -131,8 +131,8 @@ cl_kernel LoadKernel(cl_program program, const char* name);
 
 // NOTE: for OrtDevice ctor
 struct CLMemType {
-  static constexpr OrtDevice::MemoryType OPENCL_BUFFER = OrtDevice::MemType::DEFAULT;
-  static constexpr OrtDevice::MemoryType OPENCL_IMAGE_2D = 5;
+  static constexpr OrtDevice::MemoryType OPENCL_IMAGE_2D = OrtDevice::MemType::DEFAULT;
+  static constexpr OrtDevice::MemoryType OPENCL_BUFFER = 5;
 };
 
 // NOTE: for opencl internal definition.

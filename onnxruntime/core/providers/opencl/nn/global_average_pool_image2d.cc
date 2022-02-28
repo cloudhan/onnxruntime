@@ -55,9 +55,7 @@ ONNX_OPENCL_OPERATOR_KERNEL(
     GlobalAveragePool,
     1,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)   /* X */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0), /* Y */
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     GlobalAveragePool);
 
 }  // namespace opencl

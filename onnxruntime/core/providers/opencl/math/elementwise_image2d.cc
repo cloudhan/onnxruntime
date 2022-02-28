@@ -58,10 +58,7 @@ namespace opencl {
       CLASS_NAME,                                                           \
       7,                                                                    \
       KernelDefBuilder()                                                    \
-          .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())        \
-          .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)       \
-          .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1)       \
-          .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),     \
+          .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),       \
       CLASS_NAME)
 
 ELEMENT_WISE_OP_IMPL(AddRelu, "(OUT)=(X)+(Y);(OUT)=max((OUT),0.0f)");

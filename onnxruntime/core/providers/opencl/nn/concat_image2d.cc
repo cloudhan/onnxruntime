@@ -93,10 +93,7 @@ ONNX_OPERATOR_VERSIONED_KERNEL_EX(
     4, 10,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1) /* W */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Concat)
 
 
@@ -106,20 +103,14 @@ ONNX_OPERATOR_VERSIONED_KERNEL_EX(
     11, 12,
     kOpenCLExecutionProvider,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1) /* W */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Concat)
 
 ONNX_OPENCL_OPERATOR_KERNEL(
     Concat,
     13,
     KernelDefBuilder()
-        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0)
-        .InputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 1) /* W */
-        .OutputMemoryType((OrtMemType)CLMemType::OPENCL_IMAGE_2D, 0),
+        .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
     Concat)
 
 }  // namespace opencl

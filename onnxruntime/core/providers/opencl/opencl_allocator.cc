@@ -12,7 +12,9 @@ namespace opencl {
 
 OpenCLBufferAllocator::OpenCLBufferAllocator(cl_context ctx)
     : IAllocator(OrtMemoryInfo(BufferAllocatorName, OrtAllocatorType::OrtDeviceAllocator,
-                               OrtDevice(OrtDevice::GPU, CLMemType::OPENCL_BUFFER, /*device_id_=*/0))),
+                               OrtDevice(OrtDevice::GPU, CLMemType::OPENCL_BUFFER, /*device_id_=*/0),
+                                /*id_*/ 0,
+                               /*mem_type_=*/(OrtMemType)CLMemType::OPENCL_BUFFER)),
       ctx_(ctx) {
 }
 
@@ -52,9 +54,7 @@ void OpenCLBufferAllocator::Free(void* p) {
 
 OpenCLImage2DAllocator::OpenCLImage2DAllocator(cl_context ctx, bool use_fp16)
     : IAllocator(OrtMemoryInfo(Image2DAllocatorName, OrtAllocatorType::OrtDeviceAllocator,
-                               OrtDevice(OrtDevice::GPU, CLMemType::OPENCL_IMAGE_2D, /*device_id_=*/0),
-                               /*id_*/ 0,
-                               /*mem_type_=*/(OrtMemType)CLMemType::OPENCL_IMAGE_2D)),
+                               OrtDevice(OrtDevice::GPU, CLMemType::OPENCL_IMAGE_2D, /*device_id_=*/0))),
       ctx_(ctx),
       use_fp16_{use_fp16} {
 }
