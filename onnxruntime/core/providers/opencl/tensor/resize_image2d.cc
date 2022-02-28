@@ -1,4 +1,4 @@
-#include "resize_image2d.h"
+#include "resize.h"
 
 #include "core/providers/cpu/tensor/upsample.h"
 #include "core/providers/opencl/opencl_kernel.h"

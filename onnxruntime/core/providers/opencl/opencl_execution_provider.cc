@@ -16,13 +16,13 @@
 #include "memcpy_kernel.h"
 #include "core/providers/opencl/math/clip.h"
 #include "core/providers/opencl/math/elementwise.h"
-#include "core/providers/opencl/nn/conv_image2d.h"
-#include "core/providers/opencl/nn/global_average_pool_image2d.h"
-#include "core/providers/opencl/nn/relu_image2d.h"
-#include "core/providers/opencl/nn/max_pool_image2d.h"
-#include "core/providers/opencl/nn/concat_image2d.h"
+#include "core/providers/opencl/nn/conv.h"
+#include "core/providers/opencl/nn/global_average_pool.h"
+#include "core/providers/opencl/nn/relu.h"
+#include "core/providers/opencl/nn/max_pool.h"
+#include "core/providers/opencl/nn/concat.h"
 #include "core/providers/opencl/tensor/shape.h"
-#include "core/providers/opencl/tensor/resize_image2d.h"
+#include "core/providers/opencl/tensor/resize.h"
 
 namespace onnxruntime {
 namespace opencl {

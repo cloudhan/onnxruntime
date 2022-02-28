@@ -1,4 +1,4 @@
-#include "global_average_pool_image2d.h"
+#include "global_average_pool.h"
 #include "core/providers/opencl/opencl_kernel.h"
 
 namespace onnxruntime {

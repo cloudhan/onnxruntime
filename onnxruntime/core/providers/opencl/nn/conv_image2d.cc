@@ -1,4 +1,4 @@
-#include "conv_image2d.h"
+#include "conv.h"
 
 #include <sstream>
 

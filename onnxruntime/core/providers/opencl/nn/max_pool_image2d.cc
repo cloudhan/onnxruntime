@@ -1,4 +1,4 @@
-#include "max_pool_image2d.h"
+#include "max_pool.h"
 
 #include "core/providers/cpu/nn/pool_attributes.h"
 #include "core/providers/opencl/opencl_kernel.h"

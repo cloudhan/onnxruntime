@@ -1,4 +1,4 @@
-#include "concat_image2d.h"
+#include "concat.h"
 
 #include "core/providers/cpu/tensor/concatbase.h"
 #include "core/providers/opencl/opencl_kernel.h"

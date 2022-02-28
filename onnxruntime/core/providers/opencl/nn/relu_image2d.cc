@@ -1,4 +1,4 @@
-#include "relu_image2d.h"
+#include "relu.h"
 
 #include "core/providers/opencl/opencl_kernel.h"
 #include "core/providers/opencl/opencl_utils.h"
