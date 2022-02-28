@@ -72,8 +72,6 @@ class OpenCLImage2DAllocator : public IAllocator {
   void* Alloc(const TensorShape& shape) override;
   void Free(void* p) override;
 
-  TensorShape AdaptWeightShape(const TensorShape& shape, TensorUsage usage) const override;
-
  private:
   cl_context ctx_;
   bool use_fp16_;

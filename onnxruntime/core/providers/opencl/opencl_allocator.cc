@@ -117,28 +117,5 @@ void OpenCLImage2DAllocator::Free(void* p) {
   it->second.push_front(p);
 }
 
-TensorShape OpenCLImage2DAllocator::AdaptWeightShape(const TensorShape& shape, TensorUsage usage) const {
-  Image2DDesc desc;
-  switch (usage) {
-    case TensorUsage::ConvWeight:
-      desc = Image2DDesc::PackFromConv2DWeight(shape);
-      break;
-    case TensorUsage::DepthwiseConvWeight:
-      desc = Image2DDesc::PackFromDepthwiseConv2DWeight(shape);
-      break;
-    case TensorUsage::Generic:
-      desc = Image2DDesc::PackFromTensor(shape);
-      break;
-    case TensorUsage::WinogradWeight:
-      desc = Image2DDesc::PackFromWinogradTransform(shape);
-      break;
-    default:
-      ORT_NOT_IMPLEMENTED("weight usage");
-  }
-  // Image2DDesc::Pack* has implicit RGBA 4 channel, the adapted shape should
-  // make it explicit
-  return {desc.Width() * 4, desc.Height()};
-}
-
 }  // namespace opencl
 }  // namespace onnxruntime
