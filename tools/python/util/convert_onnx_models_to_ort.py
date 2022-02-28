@@ -63,7 +63,7 @@ def _create_session_options(optimization_level: ort.GraphOptimizationLevel,
 def _convert(model_path_or_dir: pathlib.Path, optimization_level_str: str, providers: typing.List[str],
              custom_op_library: pathlib.Path, create_optimized_onnx_model: bool, allow_conversion_failures: bool,
              session_options_config_entries: typing.Dict[str, str]):
-
+    assert len(providers) <= 2
     optimization_level = get_optimization_level(optimization_level_str)
 
     models = []
@@ -82,9 +82,12 @@ def _convert(model_path_or_dir: pathlib.Path, optimization_level_str: str, provi
     # devices, and creates a device specific model which won't run on all hardware.
     # If someone really really really wants to run it they could manually create an optimized onnx model first,
     # or they could comment out this code.
-    optimizer_filter = None
+    optimizer_filter = set()
     if optimization_level == ort.GraphOptimizationLevel.ORT_ENABLE_ALL:
-        optimizer_filter = ['NchwcTransformer']
+        optimizer_filter.add('NchwcTransformer')
+    if "OpenCLExecutionProvider" in providers:
+        optimizer_filter.add('NchwcTransformer')
+    optimizer_filter = list(optimizer_filter)
 
     num_failures = 0
 
