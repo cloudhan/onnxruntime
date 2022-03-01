@@ -21,7 +21,6 @@ enum ActivationKind {
   ActivationKind_Clip = 5,
 };
 
-
 struct KernelUnitParam {
   std::vector<uint32_t> global_work_size = {};
   std::vector<uint32_t> local_work_size = {};
@@ -64,14 +63,14 @@ struct FusedConvAct {
 std::vector<uint32_t> Conv2dCommonLocalWS2D(std::vector<uint32_t>& gws,
                                             const uint32_t max_workgroup_size,
                                             const uint32_t subgroup_size) {
-  //uint32_t compute_units = OpenCLRuntime::GetInstance()->DeviceComputeUnits();
+  // uint32_t compute_units = OpenCLRuntime::GetInstance()->DeviceComputeUnits();
 
   std::vector<uint32_t> lws;
   lws.clear();
 
-  //if (ADRENO == gpu_info_.type) {
-  //  lws = AdrenoLocalSize2D(gws, gpu_info_, compute_units, max_workgroup_size, subgroup_size);
-  //}
+  // if (ADRENO == gpu_info_.type) {
+  //   lws = AdrenoLocalSize2D(gws, gpu_info_, compute_units, max_workgroup_size, subgroup_size);
+  // }
 
   return lws;
 }
@@ -92,7 +91,6 @@ Status CalWGSizeForWino(const Tensor* X, const Tensor* Y, const ConvAttributes::
   const int output_channel_blocks = CeilDiv(output_channel, 4);
   const int input_channel_blocks = CeilDiv(input_channel, 4);
   const int round_up_4x4_ouptut_width = CeilDiv(round_up_ouptut_width, 4);
-
 
   winokernel[0].global_work_size = {static_cast<uint32_t>(input_channel_blocks * round_up_ouptut_width),
                                     static_cast<uint32_t>(batch_round_h)};
@@ -250,8 +248,7 @@ class Conv : public OpenCLKernel {
     return Status::OK();
   }
 
-
-    Status WinogradConv2D(const Tensor* X,
+  Status WinogradConv2D(const Tensor* X,
                         const Tensor* W,
                         const Tensor* B,
                         Tensor* Y,
@@ -279,47 +276,47 @@ class Conv : public OpenCLKernel {
     const int input_channel_blocks = CeilDiv(input_channel, 4);
     const int round_up_4x4_ouptut_width = CeilDiv(round_up_ouptut_width, 4);
 
-    opencl::Image2DDesc desc{input_channel_blocks * round_up_ouptut_width*4, 16 * batch * round_up_output_height};
+    opencl::Image2DDesc desc{input_channel_blocks * round_up_ouptut_width * 4, 16 * batch * round_up_output_height};
     auto ocl_v_ = exec_->GetScratchImage2D(desc);
     desc = {output_channel_blocks * round_up_ouptut_width * 4, 16 * batch * round_up_output_height};
     auto ocl_m_ = exec_->GetScratchImage2D(desc);
     std::vector<KernelUnitParam> winokernel(3);
     ORT_RETURN_IF_ERROR(CalWGSizeForWino(X, Y, P, winokernel));
     ORT_RETURN_IF_ERROR(KernelLauncher{GetKernel("TransformToMatrixV")}
-         .setArg<cl_int>(winokernel[0].global_work_size[0])
-         .setArg<cl_int>(winokernel[0].global_work_size[1])
-         .setImage2D(*X)
-         .setImage2D(ocl_v_.get())
-         .setInt2(input_height, input_width)
-         .setArg<cl_int>(input_channel)
-         .setArg<cl_int>(round_up_output_height)
-         .setArg<cl_int>(round_up_ouptut_width)
-         .setInt2<cl_int>(P[0], P[1])
-        .Launch(*exec_, {winokernel[0].global_work_size[0], winokernel[0].global_work_size[1]}));
+                            .setArg<cl_int>(winokernel[0].global_work_size[0])
+                            .setArg<cl_int>(winokernel[0].global_work_size[1])
+                            .setImage2D(*X)
+                            .setImage2D(ocl_v_.get())
+                            .setInt2(input_height, input_width)
+                            .setArg<cl_int>(input_channel)
+                            .setArg<cl_int>(round_up_output_height)
+                            .setArg<cl_int>(round_up_ouptut_width)
+                            .setInt2<cl_int>(P[0], P[1])
+                            .Launch(*exec_, {winokernel[0].global_work_size[0], winokernel[0].global_work_size[1]}));
     ORT_RETURN_IF_ERROR(KernelLauncher{GetKernel("MatrixInnerProduct")}
-         .setArg<cl_int>(winokernel[1].global_work_size[0])
-         .setArg<cl_int>(winokernel[1].global_work_size[1])
-         .setImage2D(ocl_v_.get())
-         .setImage2D(*W)
-         .setImage2D(ocl_m_.get())
-         .setArg(round_up_ouptut_width)
-         .setArg(round_up_4x4_ouptut_width)
-         .setArg<cl_int>(batch_round_h)
-         .setArg<cl_int>(output_channel_blocks)
-         .setArg<cl_int>(input_channel_blocks)
-         .Launch(*exec_, {winokernel[1].global_work_size[0], winokernel[1].global_work_size[1]}));
+                            .setArg<cl_int>(winokernel[1].global_work_size[0])
+                            .setArg<cl_int>(winokernel[1].global_work_size[1])
+                            .setImage2D(ocl_v_.get())
+                            .setImage2D(*W)
+                            .setImage2D(ocl_m_.get())
+                            .setArg(round_up_ouptut_width)
+                            .setArg(round_up_4x4_ouptut_width)
+                            .setArg<cl_int>(batch_round_h)
+                            .setArg<cl_int>(output_channel_blocks)
+                            .setArg<cl_int>(input_channel_blocks)
+                            .Launch(*exec_, {winokernel[1].global_work_size[0], winokernel[1].global_work_size[1]}));
     ORT_RETURN_IF_ERROR(KernelLauncher{GetKernel("TransformFromMatrixM")}
-         .setArg<cl_int>(winokernel[2].global_work_size[0])
-         .setArg<cl_int>(winokernel[2].global_work_size[1])
-         .setImage2D(ocl_m_.get())
-         .setImage2Ds((B ? *B : *W), *Y)
-         .setArg(round_up_ouptut_width)
-         .setArg(round_up_output_height)
-         .setArg<cl_int>(output_width)
-         .setArg<cl_int>(output_height)
-        .setArg<cl_int>(act_info_.kind)
-        .setArg<cl_int>(B!=nullptr)
-        .Launch(*exec_, {winokernel[2].global_work_size[0], winokernel[2].global_work_size[1]}));
+                            .setArg<cl_int>(winokernel[2].global_work_size[0])
+                            .setArg<cl_int>(winokernel[2].global_work_size[1])
+                            .setImage2D(ocl_m_.get())
+                            .setImage2Ds((B ? *B : *W), *Y)
+                            .setArg(round_up_ouptut_width)
+                            .setArg(round_up_output_height)
+                            .setArg<cl_int>(output_width)
+                            .setArg<cl_int>(output_height)
+                            .setArg<cl_int>(act_info_.kind)
+                            .setArg<cl_int>(B != nullptr)
+                            .Launch(*exec_, {winokernel[2].global_work_size[0], winokernel[2].global_work_size[1]}));
     return Status::OK();
   }
   Status Conv2D(const Tensor* X,
@@ -388,7 +385,7 @@ class Conv : public OpenCLKernel {
               .setArg<cl_float>(act_info_.param1)
               .Launch(*exec_, {gsx, gsy}));
     } else if (winograd_req) {
-        return WinogradConv2D(X, W, B, Y, K, S, P, D, attrs_.group);
+      return WinogradConv2D(X, W, B, Y, K, S, P, D, attrs_.group);
     } else {
       ZoneScopedN("Conv2D (kernel launch)");
       ORT_RETURN_IF_ERROR(
@@ -440,7 +437,7 @@ ONNX_OPERATOR_KERNEL_EX(
     kOpenCLExecutionProvider,
     KernelDefBuilder()
         .TypeConstraint("T", DataTypeImpl::GetTensorType<float>()),
-    Conv                                                              // register the Conv OpKernel as the FusedConv impl
+    Conv  // register the Conv OpKernel as the FusedConv impl
 );
 
 }  // namespace opencl
