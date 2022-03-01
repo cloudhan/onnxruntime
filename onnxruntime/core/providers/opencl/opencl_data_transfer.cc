@@ -31,22 +31,6 @@ Status OpenCLDataTransfer::CopyTensor(const Tensor& src, Tensor& dst, int exec_q
   const auto& src_device = src.Location().device;
   const auto& dst_device = dst.Location().device;
 
-  // Tensors when used as weight, some OPs use special layout optimization,
-  // need to be specially handled.
-  if (dst.Usage() != TensorUsage::Generic) {
-    ORT_ENFORCE(src_device.Type() == OrtDevice::CPU && dst_device.Type() == OrtDevice::GPU);
-    switch (dst.Usage()) {
-      case TensorUsage::ConvWeight:
-        return CopyConvWeight(src, dst);
-      case TensorUsage::WinogradWeight:
-        return CopyWinogradConvWeight(src, dst);
-      case TensorUsage::DepthwiseConvWeight:
-        return CopyDepthwiseConvWeight(src, dst);
-      default:
-        return ORT_MAKE_STATUS(ONNXRUNTIME, EP_FAIL, "unhandled tensor copy of special usage");
-    }
-  }
-
   // HOST ==> DEV
   if (src_device.Type() == OrtDevice::CPU && dst_device.Type() == OrtDevice::GPU) {
     ORT_ENFORCE(src.ByteOffset() == 0);
