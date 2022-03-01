@@ -146,7 +146,7 @@ Status OpenCLDataTransfer::CopyTensor1DToImage2D(const Tensor& src, const Image2
   auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
   ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, src.SizeInBytes(), src.DataRaw(), 0, nullptr, nullptr));
   ORT_RETURN_IF_ERROR(CopyBuffer1DToImage2D(tmp.get(), src.Shape(), dst, desc));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue())); // do sync copy, since we cannot extend the lifetime of src or tmp
+  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
   return Status::OK();
 }
 
@@ -162,7 +162,7 @@ Status OpenCLDataTransfer::CopyTensorNCHWToImage2D(const Tensor& src, const Imag
   auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
   ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, src.SizeInBytes(), src.DataRaw(), 0, nullptr, nullptr));
   ORT_RETURN_IF_ERROR(CopyBufferNCHWToImage2D(tmp.get(), src.Shape(), dst, desc));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue())); // do sync copy, since we cannot extend the lifetime of src or tmp
+  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
   return Status::OK();
 }
 
@@ -342,14 +342,14 @@ Status OpenCLDataTransfer::CopyConvWeight(const Tensor& src, Tensor& dst) const 
                           .setArg<cl_int>(shape[2] * shape[3])
                           .setImage2D(dst_image2d)
                           .Launch(*exec_, desc.AsNDRange()));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue())); // do sync copy, since we cannot extend the lifetime of src or tmp
+  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
   return Status::OK();
 }
 
 Status OpenCLDataTransfer::CopyWinogradConvWeight(const Tensor& src, Tensor& dst) const {
   ZoneScopedN("CopyConvWeight");
   auto dst_image2d = CL_IMAGE2D_FROM_TENSOR(dst);
-  //wino initialize
+  // wino initialize
   auto shape = src.Shape();
   ORT_ENFORCE(shape[2] == 3);
   ORT_ENFORCE(shape[3] == 3);
@@ -361,23 +361,21 @@ Status OpenCLDataTransfer::CopyWinogradConvWeight(const Tensor& src, Tensor& dst
   int unit_input = UNIT + kernel_size - 1;
   WinogradGenerator generator(unit_output, kernel_size, 1.0f);
   auto transform_weight = generator.allocTransformWeight(output_channel, input_channel, kernel_size, kernel_size, 4, 4);
-  //we assume the weight data is float, not half.
+  // we assume the weight data is float, not half.
   generator.transformWeight(transform_weight, src.Data<float>(), output_channel, input_channel, kernel_size, kernel_size);
   auto dims = std::get<1>(transform_weight);
   int result = sizeof(float);
   for (int index = 0; index < dims.size(); ++index) {
     result *= dims[index];
   }
-  //wino end====
+  // wino end====
 
   auto desc = Image2DDesc::PackFromWinogradTransform(dst.Shape());
   VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst_image2d);
 
- 
-
   auto tmp = exec_->GetScratchBuffer(result);
-  ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, result, 
-      std::get<0>(transform_weight).get(), 0, nullptr, nullptr));
+  ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, result,
+                                              std::get<0>(transform_weight).get(), 0, nullptr, nullptr));
   ORT_RETURN_IF_ERROR(KernelLauncher{kernels_->GetKernel("CopyBufferToImage2d")}
                           .setBuffer(tmp.get())
                           .setImage2D(dst_image2d)
@@ -406,7 +404,7 @@ Status OpenCLDataTransfer::CopyDepthwiseConvWeight(const Tensor& src, Tensor& ds
                           .setArg<cl_int>(/*shape[1] * */ shape[2] * shape[3])  // C_i * K_h * K_w, C_i == 1
                           .setImage2D(dst_image2d)
                           .Launch(*exec_, desc.AsNDRange()));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue())); // do sync copy, since we cannot extend the lifetime of src or tmp
+  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
   return Status::OK();
 }
 
