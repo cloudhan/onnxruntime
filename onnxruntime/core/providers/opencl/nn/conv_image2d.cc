@@ -150,23 +150,27 @@ class Conv : public OpenCLKernel {
     }
 
     // TODO: maybe use transformer pass to seperate them into individual OpKernels
-    if (conv_kind_ == ConvKind::Winograd) {
-      LoadProgram(winograd_conv_kernel_src, winograd_conv_kernel_src_len);
-      LoadKernel(kernel_name::TransformToMatrixV);
-      LoadKernel(kernel_name::MatrixInnerProduct);
-      LoadKernel(kernel_name::TransformFromMatrixM);
-      LoadKernel(kernel_name::CopyWinogradWeight);
-    } else if (conv_kind_ == ConvKind::Depthwise) {
-      LoadProgram(depthwise_conv_kernel_src, depthwise_conv_kernel_src_len);
-      LoadKernel(kernel_name::DepthwiseConv2D);
-      LoadKernel(kernel_name::DepthwiseConv2DS1);
-      LoadKernel(kernel_name::CopyDepthwiseWeight);
-    } else {
-      LoadProgram(generic_conv_kernel_src, generic_conv_kernel_src_len);
-      LoadKernel(kernel_name::Conv2D);
-      LoadKernel(kernel_name::Conv2DK1);
-      LoadKernel(kernel_name::Conv2DK1S1);
-      LoadKernel(kernel_name::CopyGenericWeight);
+    switch (conv_kind_) {
+      case ConvKind::Winograd:
+        LoadProgram(winograd_conv_kernel_src, winograd_conv_kernel_src_len);
+        LoadKernel(kernel_name::TransformToMatrixV);
+        LoadKernel(kernel_name::MatrixInnerProduct);
+        LoadKernel(kernel_name::TransformFromMatrixM);
+        LoadKernel(kernel_name::CopyWinogradWeight);
+        break;
+      case ConvKind::Depthwise:
+        LoadProgram(depthwise_conv_kernel_src, depthwise_conv_kernel_src_len);
+        LoadKernel(kernel_name::DepthwiseConv2D);
+        LoadKernel(kernel_name::DepthwiseConv2DS1);
+        LoadKernel(kernel_name::CopyDepthwiseWeight);
+        break;
+      case ConvKind::Generic:
+        LoadProgram(generic_conv_kernel_src, generic_conv_kernel_src_len);
+        LoadKernel(kernel_name::Conv2D);
+        LoadKernel(kernel_name::Conv2DK1);
+        LoadKernel(kernel_name::Conv2DK1S1);
+        LoadKernel(kernel_name::CopyGenericWeight);
+        break;
     }
   };
 
@@ -247,7 +251,8 @@ class Conv : public OpenCLKernel {
 
     VLOG_CL_IMAGE2D("Input X", X);
     VLOGS_DEFAULT(0) << "[CL]  " << std::setfill(' ') << std::setw(9)
-                     << "Input W" << " shape " << W_shape_
+                     << "Input W"
+                     << " shape " << W_shape_
                      << "PrePack(" << packed_weight_.get() << ")";
     if (B != nullptr) {
       VLOG_CL_IMAGE2D("Input B", B);
