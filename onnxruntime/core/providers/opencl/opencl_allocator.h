@@ -39,29 +39,10 @@ class OpenCLBufferAllocator : public IAllocator {
   std::unordered_map<size_t, std::list<void*>> cache_;
 };
 
-}  // namespace opencl
-}  // namespace onnxruntime
-
-template <>
-struct std::hash<onnxruntime::TensorShape> {
-  size_t operator()(const onnxruntime::TensorShape& shape) const {
-    auto dims = shape.GetDims();
-    using DT = decltype(dims);
-    auto h = std::hash<DT::value_type>{}(0);
-    for (const auto& s : dims) {
-      h ^= std::hash<DT::value_type>{}(s);
-    }
-    return h;
-  }
-};
-
-namespace onnxruntime {
-namespace opencl {
-
 class OpenCLImage2DAllocator : public IAllocator {
  public:
   struct Metadata {
-    TensorShape shape;
+    Image2DDesc shape;
     MemoryKind kind;
   };
 
@@ -70,6 +51,7 @@ class OpenCLImage2DAllocator : public IAllocator {
 
   void* Alloc(size_t size) override;
   void* Alloc(const TensorShape& shape) override;
+  void* Alloc(const Image2DDesc& desc);
   void Free(void* p) override;
 
  private:
@@ -78,7 +60,7 @@ class OpenCLImage2DAllocator : public IAllocator {
 
   // FIXME: better caching, cache for kernel benchmark at the moment
   std::unordered_map<void*, Metadata> meta_;
-  std::unordered_map<TensorShape, std::list<void*>> cache_;
+  std::unordered_map<Image2DDesc, std::list<void*>> cache_;
 };
 
 }  // namespace opencl

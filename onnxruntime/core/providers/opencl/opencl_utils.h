@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 #include "core/framework/op_kernel.h"
 #include "core/framework/tensor.h"
 #include "opencl_forward_decl.h"
@@ -173,6 +174,7 @@ T1 RoundToMultiple(T1 a, T2 m) {
 
 class Image2DDesc : private std::pair<int64_t, int64_t> {
  public:
+  friend struct ::std::hash<Image2DDesc>;
   using pair::pair;
 
   static Image2DDesc PackFromTensor(const TensorShape& shape) {
@@ -267,13 +269,14 @@ class Image2DDesc : private std::pair<int64_t, int64_t> {
     return static_cast<size_t>(first);
   }
 
-  TensorShape AsTensorShape() const {
-    return {Width(), Height()};
-  }
-
   NDRange AsNDRange() const {
     return {UWidth(), UHeight()};
   }
+
+  bool operator==(const onnxruntime::opencl::Image2DDesc& other) const {
+    return Width() == Width() && other.Height() == other.Height();
+  }
+
 };
 
 class KernelLauncher {
@@ -396,3 +399,14 @@ std::unique_ptr<float, std::function<void(float*)>> mapImage2dToHost(const OpenC
 std::unique_ptr<float, std::function<void(float*)>> mapImage2dToHost(const OpenCLExecutionProvider& exec, cl_mem image, int width, int height, bool write = false);
 }  // namespace opencl
 }  // namespace onnxruntime
+
+template <>
+struct std::hash<onnxruntime::opencl::Image2DDesc> {
+  size_t operator()(const onnxruntime::opencl::Image2DDesc& desc) const {
+    std::hash<int64_t> h{};
+    auto v = h(desc.Width());
+    // https://github.com/boostorg/functional/blob/c839796c8/include/boost/functional/hash/hash.hpp#L256
+    v ^= h(desc.Height()) + 0x9e3779b9 + (v << 6) + (v >> 2);
+    return v;
+  }
+};

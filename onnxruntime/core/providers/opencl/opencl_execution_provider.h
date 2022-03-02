@@ -37,7 +37,7 @@ class OpenCLExecutionProvider : public IExecutionProvider {
   cl_command_queue GetCommandQueue() const { return cmd_queue_; }
 
   IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> GetScratchBuffer(size_t nbytes) const;
-  IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> GetScratchImage2D(opencl::Image2DDesc desc) const;
+  IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> GetScratchImage2D(const opencl::Image2DDesc& desc) const;
 
   bool UseFp16() const { return use_fp16_; }
 

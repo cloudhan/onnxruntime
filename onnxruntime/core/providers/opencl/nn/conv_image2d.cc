@@ -4,6 +4,7 @@
 
 #include "core/framework/tensorprotoutils.h"
 #include "core/providers/cpu/nn/conv_attributes.h"
+#include "core/providers/opencl/opencl_allocator.h"
 #include "core/providers/opencl/opencl_kernel.h"
 #include "core/providers/opencl/opencl_data_transfer.h"
 #include "core/providers/opencl/opencl_execution_provider.h"
@@ -130,10 +131,11 @@ enum class ConvKind : uint8_t {
 };
 
 BufferUniquePtr CreateImage2D(const IExecutionProvider* exec, Image2DDesc desc) {
-  auto alloc = exec->GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
+  auto base_alloc = exec->GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
+  auto alloc = std::dynamic_pointer_cast<OpenCLImage2DAllocator>(base_alloc);
   return BufferUniquePtr{
-      alloc->Alloc(desc.AsTensorShape()),
-      BufferDeleter(alloc)};
+      alloc->Alloc(desc),
+      BufferDeleter(base_alloc)};
 }
 
 class Conv : public OpenCLKernel {
@@ -503,9 +505,9 @@ class Conv : public OpenCLKernel {
     const int input_channel_blocks = CeilDiv(input_channel, 4);
     const int round_up_4x4_ouptut_width = CeilDiv(round_up_ouptut_width, 4);
 
-    opencl::Image2DDesc desc{input_channel_blocks * round_up_ouptut_width * 4, 16 * batch * round_up_output_height};
+    opencl::Image2DDesc desc{input_channel_blocks * round_up_ouptut_width, 16 * batch * round_up_output_height};
     auto ocl_v_ = exec_->GetScratchImage2D(desc);
-    desc = {output_channel_blocks * round_up_ouptut_width * 4, 16 * batch * round_up_output_height};
+    desc = {output_channel_blocks * round_up_ouptut_width, 16 * batch * round_up_output_height};
     auto ocl_m_ = exec_->GetScratchImage2D(desc);
     std::vector<KernelUnitParam> winokernel(3);
     ORT_RETURN_IF_ERROR(CalWGSizeForWino(X, Y, P, winokernel));

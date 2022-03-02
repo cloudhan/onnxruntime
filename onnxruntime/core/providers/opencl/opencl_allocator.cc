@@ -71,11 +71,14 @@ void* OpenCLImage2DAllocator::Alloc(size_t) {
 }
 
 void* OpenCLImage2DAllocator::Alloc(const TensorShape& shape) {
+  return Alloc(Image2DDesc::PackFromTensor(shape));
+}
+
+void* OpenCLImage2DAllocator::Alloc(const Image2DDesc& desc) {
   ZoneScopedN("OpenCLImage2DAllocator::Alloc")
-  auto it = cache_.find(shape);
+  auto it = cache_.find(desc);
   if (it == cache_.end() || it->second.empty()) {
     cl_int err{};
-    auto desc = Image2DDesc::PackFromTensor(shape);
     // FIXME: range limit is for NVIDIA GPU, adjust it for target gpu!
     ORT_ENFORCE(desc.Height() > 0 && desc.Height() <= 65535, "Image2D height invalid");
     ORT_ENFORCE(desc.Width() > 0 && desc.Width() <= 65535, "Image2D width invalid");
@@ -98,7 +101,7 @@ void* OpenCLImage2DAllocator::Alloc(const TensorShape& shape) {
     auto* ptr = clCreateImage(ctx_, CL_MEM_READ_WRITE, &image_format, &image_desc, nullptr, &err);
     ORT_THROW_IF_CL_ERROR(err);
     VLOGF_DEFAULT(0, "[CL] allocated Image2D(%p){w=%ld, h=%ld})", ptr, desc.Width(), desc.Height());
-    meta_[ptr] = {shape, MemoryKind::Image2D};
+    meta_[ptr] = {desc, MemoryKind::Image2D};
     return ptr;
   }
 
