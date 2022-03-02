@@ -145,7 +145,6 @@ class Conv : public OpenCLKernel {
     VLOGS_DEFAULT(0) << "[CL] Init Conv (OpenCLKernel), auto_pad:" << static_cast<int>(attrs_.auto_pad) << ", dilations: " << attrs_.dilations << ", group: " << attrs_.group;
 
     auto status = InitConvKind();
-    conv_kind_ = ConvKind::Generic;
     if (!status.IsOK()) {
       conv_kind_ = ConvKind::Generic;
       LOGS_DEFAULT(WARNING) << "InitConvKind Error: " << status.ErrorMessage() << ", using ConvKind::Generic, this might harm inference performance.";
