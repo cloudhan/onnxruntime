@@ -49,22 +49,37 @@
   }
 
 #if USE_CL_CHECKED_CAST
+#define CL_CHECK_MEM_OBJECT_IS_BUFFER(mem)                                                                          \
+  {                                                                                                                 \
+    cl_mem_object_type ret;                                                                                         \
+    ORT_THROW_IF_CL_ERROR(clGetMemObjectInfo((cl_mem)mem, CL_MEM_TYPE, sizeof(cl_mem_object_type), &ret, nullptr)); \
+    ORT_ENFORCE(ret == CL_MEM_OBJECT_BUFFER, mem, " is not Buffer");                                                \
+  }
+#define CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(mem)                                                                        \
+  {                                                                                                                 \
+    cl_mem_object_type ret;                                                                                         \
+    ORT_THROW_IF_CL_ERROR(clGetMemObjectInfo((cl_mem)mem, CL_MEM_TYPE, sizeof(cl_mem_object_type), &ret, nullptr)); \
+    ORT_ENFORCE(ret == CL_MEM_OBJECT_IMAGE2D, mem, " is not Image2D");                                              \
+  }
+
 #define CL_BUFFER_FROM_TENSOR(TENSOR) [&]() {                                                             \
   cl_mem ptr = const_cast<cl_mem>(static_cast<const std::remove_pointer_t<cl_mem>*>((TENSOR).DataRaw())); \
-  cl_mem_object_type ret;                                                                                 \
-  ORT_THROW_IF_CL_ERROR(clGetMemObjectInfo(ptr, CL_MEM_TYPE, sizeof(cl_mem_object_type), &ret, nullptr)); \
-  ORT_ENFORCE(ret == CL_MEM_OBJECT_BUFFER, ptr, " is not Buffer");                                        \
+  if (ptr) {                                                                                              \
+    CL_CHECK_MEM_OBJECT_IS_BUFFER(ptr);                                                                   \
+  }                                                                                                       \
   return ptr;                                                                                             \
 }()
 
 #define CL_IMAGE2D_FROM_TENSOR(TENSOR) [&]() {                                                            \
   cl_mem ptr = const_cast<cl_mem>(static_cast<const std::remove_pointer_t<cl_mem>*>((TENSOR).DataRaw())); \
-  cl_mem_object_type ret;                                                                                 \
-  ORT_THROW_IF_CL_ERROR(clGetMemObjectInfo(ptr, CL_MEM_TYPE, sizeof(cl_mem_object_type), &ret, nullptr)); \
-  ORT_ENFORCE(ret == CL_MEM_OBJECT_IMAGE2D, ptr, " is not Image2D");                                      \
+  if (ptr) {                                                                                              \
+    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(ptr);                                                                 \
+  }                                                                                                       \
   return ptr;                                                                                             \
 }()
 #else
+#define CL_CHECK_MEM_OBJECT_IS_BUFFER(mem)
+#define CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(mem)
 #define CL_BUFFER_FROM_TENSOR(TENSOR) const_cast<cl_mem>(static_cast<const std::remove_pointer_t<cl_mem>*>((TENSOR).DataRaw()))
 #define CL_IMAGE2D_FROM_TENSOR(TENSOR) const_cast<cl_mem>(static_cast<const std::remove_pointer_t<cl_mem>*>((TENSOR).DataRaw()))
 #endif

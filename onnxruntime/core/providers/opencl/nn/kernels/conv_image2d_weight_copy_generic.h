@@ -1,8 +1,8 @@
 #pragma once
 
-#include "./utils.h"
+#include "kernels/utils.h"
 
-__kernel void Conv2DWeightBufferToImage(
+__kernel void CopyGenericConv2DWeightBufferToImage(
     const int width, const int height,  // image, width = C_i, height = CeilDiv(C_o, 4)*K_h*K_w
     __global const float* data,
     __private const int4 kernel_shape,

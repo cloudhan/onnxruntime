@@ -4,7 +4,6 @@
 #include "opencl_utils.h"
 #include "opencl_kernel_holder.h"
 #include "opencl_data_transfer.h"
-#include "core/providers/winograd_generator.h"
 
 #include "core/framework/ortdevice.h"
 #include "core/framework/tensor.h"
@@ -324,89 +323,5 @@ Status OpenCLDataTransfer::CopyImage2DToBufferNCHWc(
 Status OpenCLDataTransfer::UnimplementedCopy() const {
   ORT_NOT_IMPLEMENTED("Not Implemented Copy");
 };
-
-Status OpenCLDataTransfer::CopyConvWeight(const Tensor& src, Tensor& dst) const {
-  ZoneScopedN("CopyConvWeight");
-  auto dst_image2d = CL_IMAGE2D_FROM_TENSOR(dst);
-  auto desc = Image2DDesc::PackFromConv2DWeight(dst.Shape());
-  VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst_image2d);
-
-  auto shape = src.Shape();
-  auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
-  ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, src.SizeInBytes(), src.DataRaw(), 0, nullptr, nullptr));
-  ORT_RETURN_IF_ERROR(KernelLauncher{kernels_->GetKernel("Conv2DWeightBufferToImage")}
-                          .setArg<cl_int>(desc.Width())
-                          .setArg<cl_int>(desc.Height())
-                          .setBuffer(tmp.get())
-                          .setInt4(shape[0], shape[1], shape[2], shape[3])
-                          .setArg<cl_int>(shape[2] * shape[3])
-                          .setImage2D(dst_image2d)
-                          .Launch(*exec_, desc.AsNDRange()));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
-  return Status::OK();
-}
-
-Status OpenCLDataTransfer::CopyWinogradConvWeight(const Tensor& src, Tensor& dst) const {
-  ZoneScopedN("CopyConvWeight");
-  auto dst_image2d = CL_IMAGE2D_FROM_TENSOR(dst);
-  // wino initialize
-  auto shape = src.Shape();
-  ORT_ENFORCE(shape[2] == 3);
-  ORT_ENFORCE(shape[3] == 3);
-  int64_t output_channel = shape[0];
-  int64_t input_channel = shape[1];
-  const int kernel_size = shape[3];
-#define UNIT 2
-  int unit_output = UNIT;
-  int unit_input = UNIT + kernel_size - 1;
-  WinogradGenerator generator(unit_output, kernel_size, 1.0f);
-  auto transform_weight = generator.allocTransformWeight(output_channel, input_channel, kernel_size, kernel_size, 4, 4);
-  // we assume the weight data is float, not half.
-  generator.transformWeight(transform_weight, src.Data<float>(), output_channel, input_channel, kernel_size, kernel_size);
-  auto dims = std::get<1>(transform_weight);
-  int result = sizeof(float);
-  for (int index = 0; index < dims.size(); ++index) {
-    result *= dims[index];
-  }
-  // wino end====
-
-  auto desc = Image2DDesc::PackFromWinogradTransform(dst.Shape());
-  VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst_image2d);
-
-  auto tmp = exec_->GetScratchBuffer(result);
-  ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, result,
-                                              std::get<0>(transform_weight).get(), 0, nullptr, nullptr));
-  ORT_RETURN_IF_ERROR(KernelLauncher{kernels_->GetKernel("CopyBufferToImage2d")}
-                          .setBuffer(tmp.get())
-                          .setImage2D(dst_image2d)
-                          .setArg<cl_int>(desc.Width())
-                          .setArg<cl_int>(desc.Height())
-                          .Launch(*exec_, desc.AsNDRange()));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
-  return Status::OK();
-}
-
-Status OpenCLDataTransfer::CopyDepthwiseConvWeight(const Tensor& src, Tensor& dst) const {
-  ZoneScopedN("CopyDepthwiseConvWeight");
-  auto dst_image2d = CL_IMAGE2D_FROM_TENSOR(dst);
-  auto desc = Image2DDesc::PackFromDepthwiseConv2DWeight(dst.Shape());
-  VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst_image2d);
-
-  auto shape = src.Shape();
-  ORT_ENFORCE(shape[1] == 1, "input channel per group must be 1");
-  auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
-  ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, src.SizeInBytes(), src.DataRaw(), 0, nullptr, nullptr));
-  ORT_RETURN_IF_ERROR(KernelLauncher{kernels_->GetKernel("CopyDepthwiseConvWeightBufferToImage")}
-                          .setArg<cl_int>(desc.Width())
-                          .setArg<cl_int>(desc.Height())
-                          .setBuffer(tmp.get())
-                          .setInt4(shape[0], shape[1], shape[2], shape[3])
-                          .setArg<cl_int>(/*shape[1] * */ shape[2] * shape[3])  // C_i * K_h * K_w, C_i == 1
-                          .setImage2D(dst_image2d)
-                          .Launch(*exec_, desc.AsNDRange()));
-  ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
-  return Status::OK();
-}
-
 }  // namespace opencl
 }  // namespace onnxruntime

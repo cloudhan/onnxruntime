@@ -1,11 +1,11 @@
 #pragma once
 
-#include "./utils.h"
+#include "kernels/utils.h"
 
 // C_i == input_channel_per_group, since it is depthwise, it is always 1
 // C_o == total_output_channel == group * output_channel_per_group, currently,
 //     we are limiting output_channel_per_group == 1
-__kernel void CopyDepthwiseConvWeightBufferToImage(
+__kernel void CopyDepthwiseConv2DWeightBufferToImage(
     const int gs_dim0, // gs_dim0 = output width  = C_i*K_h*K_w, where C_i == 1
     const int gs_dim1, // gs_dim1 = output height = CeilDiv(C_o, 4)
     __global const float* data,

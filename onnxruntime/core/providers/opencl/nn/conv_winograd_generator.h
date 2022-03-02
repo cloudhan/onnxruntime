@@ -20,7 +20,7 @@
 #include "core/framework/tensor.h"
 
 namespace onnxruntime {
-using DimsVector = std::vector<int>;
+using DimsVector = std::vector<int64_t>;
 typedef std::tuple<std::shared_ptr<float>, DimsVector> CMatrix;
 CMatrix CMatrixCreate(int w, int h);
 CMatrix CMatrixCreate(DimsVector dims);
