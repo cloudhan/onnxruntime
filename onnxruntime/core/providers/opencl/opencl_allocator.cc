@@ -113,9 +113,9 @@ void* OpenCLImage2DAllocator::Alloc(const Image2DDesc& desc) {
 
 void OpenCLImage2DAllocator::Free(void* p) {
   auto meta = meta_[p];
-  auto it = cache_.find(meta.shape);
+  auto it = cache_.find(meta.desc);
   if (it == cache_.end()) {
-    it = cache_.insert({meta.shape, {}}).first;
+    it = cache_.insert({meta.desc, {}}).first;
   }
   it->second.push_front(p);
 }

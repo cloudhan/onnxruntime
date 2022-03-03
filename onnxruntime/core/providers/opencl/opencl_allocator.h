@@ -42,7 +42,7 @@ class OpenCLBufferAllocator : public IAllocator {
 class OpenCLImage2DAllocator : public IAllocator {
  public:
   struct Metadata {
-    Image2DDesc shape;
+    Image2DDesc desc;
     MemoryKind kind;
   };
 
