@@ -126,23 +126,22 @@ if __name__ == "__main__":
     parser.add_argument("--output", "-o", default=None, type=os.path.realpath)
 
     args = parser.parse_args()
-    print("pre-processing", args.file)
+    # print("pre-processing", args.file)
 
-    filename_relative_to_ort = compute_path(args.file)
     file_content = open(args.file, "rb").read()
 
     # handling opencl preprocessing
     if args.x == "cl":
         clpp = OpenCLPreprocessor(args.I)
-        clpp.parse(file_content.decode("utf8"), filename_relative_to_ort)
+        clpp.parse(file_content.decode("utf8"), os.path.realpath(args.file))
+        out = io.StringIO()
+        clpp.write(out)
         if args.M:
             deps = clpp.get_dependencies()
             for d in deps:
                 print(d)
             exit(0)
 
-        out = io.StringIO()
-        clpp.write(out)
         file_content = out.getvalue()
         file_content_cl = file_content
         file_content = file_content.encode("utf8")
@@ -161,6 +160,7 @@ if __name__ == "__main__":
     # the array the body
     content = io.StringIO()
     if not args.no_header:
+        filename_relative_to_ort = compute_path(args.file)
         content.write(f"  // generated from {filename_relative_to_ort}\n\n")
         if args.x == "cl":
             for line in file_content_cl.split("\n"):

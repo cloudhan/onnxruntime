@@ -696,7 +696,7 @@ endif()
 if (onnxruntime_USE_OPENCL)
   add_definitions(-DUSE_OPENCL=1)
 
-  # TODO: Implement simple compiler driver to help
+  # Implement simple compiler driver to help
   #
   # a.h--------┐
   # b.h--------┤
@@ -724,14 +724,18 @@ if (onnxruntime_USE_OPENCL)
     get_filename_component(dir_of_f ${f} DIRECTORY ABSOLUTE)
     set(output "${opencl_target_dir}/${suffix}.inc")
     execute_process(
-      COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/embed.py -x cl
+      COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/embed.py -x cl
               -I "${ONNXRUNTIME_ROOT}/core/providers/opencl"
               -I "${dir_of_f}"
               -M ${f}
-      OUTPUT_VARIABLE deps
+      OUTPUT_VARIABLE out
+      OUTPUT_STRIP_TRAILING_WHITESPACE
     )
+    string(REPLACE "\n" ";" deps ${out})
+    message("${deps}")
     add_custom_command(
       OUTPUT ${output}
+      COMMENT "Generating ${output}"
       COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/embed.py -x cl
               -I "${ONNXRUNTIME_ROOT}/core/providers/opencl"
               -I "${dir_of_f}"
