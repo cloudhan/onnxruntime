@@ -132,9 +132,8 @@ enum class ConvKind : uint8_t {
 
 BufferUniquePtr CreateImage2D(const IExecutionProvider* exec, Image2DDesc desc) {
   auto base_alloc = exec->GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
-  auto alloc = std::dynamic_pointer_cast<OpenCLImage2DAllocator>(base_alloc);
   return BufferUniquePtr{
-      alloc->Alloc(desc),
+      static_cast<OpenCLImage2DAllocator*>(base_alloc.get())->Alloc(desc),
       BufferDeleter(base_alloc)};
 }
 

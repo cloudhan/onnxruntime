@@ -240,8 +240,8 @@ IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> OpenCLExecutionProvider::GetS
 }
 
 IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> OpenCLExecutionProvider::GetScratchImage2D(const opencl::Image2DDesc& desc) const {
-  auto alloc = std::dynamic_pointer_cast<opencl::OpenCLImage2DAllocator>(
-      GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D));
+  auto base_alloc = GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
+  auto* alloc = static_cast<opencl::OpenCLImage2DAllocator*>(base_alloc.get());
   return IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>>{
       static_cast<cl_mem>(alloc->Alloc(desc)),
       [=](void* ptr) {
