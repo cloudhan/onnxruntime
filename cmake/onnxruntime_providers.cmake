@@ -723,24 +723,36 @@ if (onnxruntime_USE_OPENCL)
     string(REPLACE ${opencl_cl_path_prefix} "" suffix ${f})
     get_filename_component(dir_of_f ${f} DIRECTORY ABSOLUTE)
     set(output "${opencl_target_dir}/${suffix}.inc")
-    execute_process(
+    add_custom_command(
+      # The Scanning Step:
+      #
+      # ${output}.deps-nonexisting will not be created, it purely work as
+      # a trigger for updating ${output}.deps on every build. embed.py generates
+      # a full list of included files by expanding all #include and calculate
+      # checksum for each header file. If the new content match the existing
+      # ${output}.deps, this file will not be updated.
+      OUTPUT ${output}.deps ${output}.deps-nonexisting
       COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/embed.py -x cl
               -I "${ONNXRUNTIME_ROOT}/core/providers/opencl"
               -I "${dir_of_f}"
-              -M ${f}
-      OUTPUT_VARIABLE out
-      OUTPUT_STRIP_TRAILING_WHITESPACE
+              -M ${f} -o ${output}.deps
+      DEPENDS ${PROJECT_SOURCE_DIR}/embed.py ${f}
+      COMMENT "Scanning ${f} for transitive dependencies"
     )
-    string(REPLACE "\n" ";" deps ${out})
-    message("${deps}")
     add_custom_command(
+      # The Generating Step:
+      #
+      # This will be triggered by ${output}.deps, aka, any transitive
+      # dependencies content change will cause the ${output}.deps being updated
+      # thus, new ${output} is created and compiling and linking will be
+      # triggered.
       OUTPUT ${output}
-      COMMENT "Generating ${output}"
       COMMAND Python3::Interpreter ${PROJECT_SOURCE_DIR}/embed.py -x cl
-              -I "${ONNXRUNTIME_ROOT}/core/providers/opencl"
-              -I "${dir_of_f}"
-              ${f} -o ${output}
-      DEPENDS ${PROJECT_SOURCE_DIR}/embed.py ${f} ${deps}
+      -I "${ONNXRUNTIME_ROOT}/core/providers/opencl"
+      -I "${dir_of_f}"
+      ${f} -o ${output}
+      DEPENDS ${PROJECT_SOURCE_DIR}/embed.py ${f} ${output}.deps
+      COMMENT "Generating ${output}"
     )
     list(APPEND opencl_generated_cl_includes "${output}")
   endforeach()

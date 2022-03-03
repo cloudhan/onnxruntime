@@ -6,6 +6,7 @@ import os
 import sys
 import pip
 import subprocess
+import hashlib
 
 
 def install(package):
@@ -110,6 +111,32 @@ class OpenCLPreprocessor(Preprocessor):
         return inc
 
 
+def get_sha1sum(path):
+    sha1 = hashlib.sha1()
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            sha1.update(f.read())
+    return sha1.hexdigest()
+
+
+def write_output(path, content: str, *, write_if_changed_only=False):
+    if path is None:
+        print(content)
+        return
+
+    content = content.encode("utf8")
+    should_write = True
+    if write_if_changed_only and os.path.exists(path):
+        with open(path, "rb") as f:
+            old_content = f.read(len(content) + 1)
+        if old_content == content:
+            should_write = False
+    if should_write:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(content)
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
@@ -138,8 +165,8 @@ if __name__ == "__main__":
         clpp.write(out)
         if args.M:
             deps = clpp.get_dependencies()
-            for d in deps:
-                print(d)
+            sha1_and_deps = map(lambda path: get_sha1sum(path) + " " + path, deps)
+            write_output(args.output, "\n".join(sha1_and_deps), write_if_changed_only=True)
             exit(0)
 
         file_content = out.getvalue()
@@ -174,10 +201,4 @@ if __name__ == "__main__":
                                         array_length=file_content_len +
                                         (0 if args.no_null_terminated else 1),
                                         length=file_content_len)
-    if args.output:
-        os.makedirs(os.path.dirname(args.output), exist_ok=True)
-        with open(args.output, "w") as fout:
-            fout.write(generated)
-            fout.write("\n")
-    else:
-        print(generated)
+    write_output(args.output, generated)
