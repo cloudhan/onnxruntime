@@ -274,7 +274,7 @@ class Image2DDesc : private std::pair<int64_t, int64_t> {
   }
 
   bool operator==(const onnxruntime::opencl::Image2DDesc& other) const {
-    return Width() == Width() && other.Height() == other.Height();
+    return Width() == other.Width() && Height() == other.Height();
   }
 
 };
