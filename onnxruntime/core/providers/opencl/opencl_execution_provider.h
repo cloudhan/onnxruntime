@@ -18,6 +18,8 @@ struct OpenCLExecutionProviderInfo {
   bool use_fp16;
 };
 
+using IAllocatorUniquePtrToClMem = IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>>;
+
 // Logical device representation.
 class OpenCLExecutionProvider : public IExecutionProvider {
   friend class opencl::OpenCLDataTransfer;
@@ -36,8 +38,8 @@ class OpenCLExecutionProvider : public IExecutionProvider {
   cl_context GetOpenCLContext() const { return ctx_; }
   cl_command_queue GetCommandQueue() const { return cmd_queue_; }
 
-  IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> GetScratchBuffer(size_t nbytes) const;
-  IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> GetScratchImage2D(const opencl::Image2DDesc& desc) const;
+  IAllocatorUniquePtrToClMem GetScratchBuffer(size_t nbytes) const;
+  IAllocatorUniquePtrToClMem GetScratchImage2D(const opencl::Image2DDesc& desc) const;
 
   bool UseFp16() const { return use_fp16_; }
 

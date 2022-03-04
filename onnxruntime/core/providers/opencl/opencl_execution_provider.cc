@@ -230,19 +230,19 @@ void OpenCLExecutionProvider::RegisterAllocator(std::shared_ptr<AllocatorManager
       }}));
 }
 
-IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> OpenCLExecutionProvider::GetScratchBuffer(size_t nbytes) const {
+IAllocatorUniquePtrToClMem OpenCLExecutionProvider::GetScratchBuffer(size_t nbytes) const {
   auto alloc = GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_BUFFER);
-  return IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>>{
+  return {
       static_cast<cl_mem>(alloc->Alloc(nbytes)),
       [=](void* ptr) {
         alloc->Free(ptr);
       }};
 }
 
-IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>> OpenCLExecutionProvider::GetScratchImage2D(const opencl::Image2DDesc& desc) const {
+IAllocatorUniquePtrToClMem OpenCLExecutionProvider::GetScratchImage2D(const opencl::Image2DDesc& desc) const {
   auto base_alloc = GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
   auto* alloc = static_cast<opencl::OpenCLImage2DAllocator*>(base_alloc.get());
-  return IAllocatorUniquePtr<std::remove_pointer_t<cl_mem>>{
+  return {
       static_cast<cl_mem>(alloc->Alloc(desc)),
       [=](void* ptr) {
         alloc->Free(ptr);

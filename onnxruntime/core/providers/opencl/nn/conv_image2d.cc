@@ -130,13 +130,6 @@ enum class ConvKind : uint8_t {
   Winograd,
 };
 
-BufferUniquePtr CreateImage2D(const IExecutionProvider* exec, Image2DDesc desc) {
-  auto base_alloc = exec->GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
-  return BufferUniquePtr{
-      static_cast<OpenCLImage2DAllocator*>(base_alloc.get())->Alloc(desc),
-      BufferDeleter(base_alloc)};
-}
-
 class Conv : public OpenCLKernel {
  public:
   explicit Conv(const OpKernelInfo& info) : OpenCLKernel(info), attrs_{info} {
@@ -183,13 +176,13 @@ class Conv : public OpenCLKernel {
       // BufferUniquePtr prepacked_weight;
       switch (conv_kind_) {
         case ConvKind::Depthwise:
-          ORT_RETURN_IF_ERROR(PackDepthwiseWeight(tensor, &packed_weight_));
+          ORT_RETURN_IF_ERROR(PackDepthwiseWeight(tensor));
           break;
         case ConvKind::Winograd:
-          ORT_RETURN_IF_ERROR(PackWinogradWeight(tensor, &packed_weight_));
+          ORT_RETURN_IF_ERROR(PackWinogradWeight(tensor));
           break;
         case ConvKind::Generic:
-          ORT_RETURN_IF_ERROR(PackGenericWeight(tensor, &packed_weight_));
+          ORT_RETURN_IF_ERROR(PackGenericWeight(tensor));
           break;
       }
       W_shape_ = tensor.Shape();
@@ -253,7 +246,7 @@ class Conv : public OpenCLKernel {
     VLOGS_DEFAULT(0) << "[CL]  " << std::setfill(' ') << std::setw(9)
                      << "Input W"
                      << " shape " << W_shape_
-                     << "PrePack(" << packed_weight_.get() << ")";
+                     << "PrePack(" << GetPackedWeight() << ")";
     if (B != nullptr) {
       VLOG_CL_IMAGE2D("Input B", B);
     }
@@ -321,13 +314,13 @@ class Conv : public OpenCLKernel {
     return Status::OK();
   }
 
-  Status PackGenericWeight(const Tensor& src, BufferUniquePtr* dst) const {
+  Status PackGenericWeight(const Tensor& src) {
     ZoneScopedN("PackGenericWeight");
     auto shape = src.Shape();
     auto desc = Image2DDesc::PackFromConv2DWeight(shape);
-    *dst = CreateImage2D(exec_, desc);
-    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(dst->get());
-    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst->get());
+    packed_weight_ = std::move(exec_->GetScratchImage2D(desc));
+    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(GetPackedWeight());
+    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), GetPackedWeight());
 
     auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
     // TODO: refactor out clEnqueueWriteBuffer, backend api exposed
@@ -338,20 +331,20 @@ class Conv : public OpenCLKernel {
                             .setBuffer(tmp.get())
                             .setInt4(shape[0], shape[1], shape[2], shape[3])
                             .setArg<cl_int>(shape[2] * shape[3])
-                            .setImage2D(static_cast<cl_mem>(dst->get()))
+                            .setImage2D(static_cast<cl_mem>(GetPackedWeight()))
                             .Launch(*exec_, desc.AsNDRange()));
     // TODO: refactor out clFinish, backend api exposed
     ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
     return Status::OK();
   }
 
-  Status PackDepthwiseWeight(const Tensor& src, BufferUniquePtr* dst) const {
+  Status PackDepthwiseWeight(const Tensor& src) {
     ZoneScopedN("PackDepthwiseWeight");
     auto shape = src.Shape();
     auto desc = Image2DDesc::PackFromDepthwiseConv2DWeight(shape);
-    *dst = CreateImage2D(exec_, desc);
-    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(dst->get());
-    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst->get());
+    packed_weight_ = std::move(exec_->GetScratchImage2D(desc));
+    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(GetPackedWeight());
+    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), GetPackedWeight());
 
     ORT_ENFORCE(shape[1] == 1, "input channel per group must be 1");
     auto tmp = exec_->GetScratchBuffer(src.SizeInBytes());
@@ -363,19 +356,19 @@ class Conv : public OpenCLKernel {
                             .setBuffer(tmp.get())
                             .setInt4(shape[0], shape[1], shape[2], shape[3])
                             .setArg<cl_int>(/*shape[1] * */ shape[2] * shape[3])  // C_i * K_h * K_w, C_i == 1
-                            .setImage2D(static_cast<cl_mem>(dst->get()))
+                            .setImage2D(static_cast<cl_mem>(GetPackedWeight()))
                             .Launch(*exec_, desc.AsNDRange()));
     // TODO: refactor out clFinish, backend api exposed
     ORT_RETURN_IF_CL_ERROR(clFinish(exec_->GetCommandQueue()));  // do sync copy, since we cannot extend the lifetime of src or tmp
     return Status::OK();
   }
 
-  Status PackWinogradWeight(const Tensor& src, BufferUniquePtr* dst) const {
+  Status PackWinogradWeight(const Tensor& src) {
     ZoneScopedN("PackWinogradWeight");
     auto shape = src.Shape();
     auto desc = Image2DDesc::PackFromWinogradTransform(shape);
-    *dst = CreateImage2D(exec_, desc);
-    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(dst->get());
+    packed_weight_ = std::move(exec_->GetScratchImage2D(desc));
+    CL_CHECK_MEM_OBJECT_IS_IMAGE_2D(GetPackedWeight());
 
     // wino initialize
     ORT_ENFORCE(shape[2] == 3);
@@ -395,14 +388,14 @@ class Conv : public OpenCLKernel {
       result *= dims[index];
     }
 
-    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), dst->get());
+    VLOGF_DEFAULT(0, "[CL] copy    host(%p) --> Image2D(%p)", src.DataRaw(), GetPackedWeight());
 
     auto tmp = exec_->GetScratchBuffer(result);
     ORT_RETURN_IF_CL_ERROR(clEnqueueWriteBuffer(exec_->GetCommandQueue(), tmp.get(), /*blocking_write=*/CL_FALSE, /*offset=*/0, result,
                                                 std::get<0>(transform_weight).get(), 0, nullptr, nullptr));
     ORT_RETURN_IF_ERROR(KernelLauncher{GetKernel(kernel_name::CopyWinogradWeight)}
                             .setBuffer(tmp.get())
-                            .setImage2D(static_cast<cl_mem>(dst->get()))
+                            .setImage2D(static_cast<cl_mem>(GetPackedWeight()))
                             .setArg<cl_int>(desc.Width())
                             .setArg<cl_int>(desc.Height())
                             .Launch(*exec_, desc.AsNDRange()));
@@ -631,7 +624,11 @@ class Conv : public OpenCLKernel {
   FusedConvAct act_info_;
   ConvKind conv_kind_;
   TensorShape W_shape_;
-  BufferUniquePtr packed_weight_;
+  IAllocatorUniquePtrToClMem packed_weight_;
+
+  cl_mem GetPackedWeight() const {
+    return packed_weight_.get();
+  }
 };
 
 ONNX_OPERATOR_VERSIONED_KERNEL_EX(

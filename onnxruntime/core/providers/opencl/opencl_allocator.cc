@@ -112,6 +112,7 @@ void* OpenCLImage2DAllocator::Alloc(const Image2DDesc& desc) {
 }
 
 void OpenCLImage2DAllocator::Free(void* p) {
+  // VLOGF_DEFAULT(FATAL, )
   auto meta = meta_[p];
   auto it = cache_.find(meta.desc);
   if (it == cache_.end()) {
