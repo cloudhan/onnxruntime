@@ -53,11 +53,18 @@ cl_program CreateProgramWithSource(cl_context ctx, cl_device_id dev, std::string
   cl_int err{};
   const auto* data = src.data();
   const auto size = src.size();
-  auto* program = clCreateProgramWithSource(ctx, 1, &data, &size, &err);
+  cl_program program;
+  {
+    ZoneScopedN("clCreateProgramWithSource");
+    program = clCreateProgramWithSource(ctx, 1, &data, &size, &err);
+  }
   ORT_THROW_IF_CL_ERROR(err);
 
   // Specially handle this error, we need compiler error message here.
-  err = clBuildProgram(program, 1, &dev, "", nullptr, nullptr);
+  {
+    ZoneScopedN("clBuildProgram");
+    err = clBuildProgram(program, 1, &dev, "", nullptr, nullptr);
+  }
   if (err != CL_SUCCESS) {
     size_t ret_size;
     clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &ret_size);
@@ -76,7 +83,11 @@ cl_program CreateProgramWithSource(cl_context ctx, cl_device_id dev, std::string
 
 cl_kernel LoadKernelFromProgram(cl_program program, std::string_view name) {
   cl_int err{};
-  auto* kernel = clCreateKernel(program, std::string{name}.c_str(), &err);
+  cl_kernel kernel;
+  {
+    ZoneScopedN("clCreateKernel");
+    kernel = clCreateKernel(program, std::string{name}.c_str(), &err);
+  }
   ORT_THROW_IF_CL_ERROR(err);
   return kernel;
 }
@@ -87,6 +98,7 @@ inline uint64_t GetProgramKeyFromFullSource(const std::string_view full_src) {
 }
 
 cl_program OpenCLProgramManager::GetProgram(std::string_view src_body) {
+  ZoneScopedN("OpenCLProgramManager::GetProgram");
   auto full_src = GetFullSource(src_body, exec_->UseFp16());
   auto key = GetProgramKey(full_src);
 
@@ -105,6 +117,7 @@ cl_program OpenCLProgramManager::GetProgram(std::string_view src_body) {
 }
 
 void OpenCLProgramManager::ReleaseProgram(cl_program program) {
+  ZoneScopedN("OpenCLProgramManager::ReleaseProgram");
   auto rc = DerefProgram(program);
   if (rc == 0) {
     EvictProgram(program);
@@ -113,6 +126,7 @@ void OpenCLProgramManager::ReleaseProgram(cl_program program) {
 }
 
 cl_kernel OpenCLProgramManager::GetKernel(cl_program program, std::string_view kernel_name) {
+  ZoneScopedN("OpenCLProgramManager::GetKernel");
   KernelKey key{program, kernel_name};
   const auto& it = kernel_registry_.find(key);
   if (it != kernel_registry_.cend()) {
@@ -129,6 +143,7 @@ cl_kernel OpenCLProgramManager::GetKernel(cl_program program, std::string_view k
 }
 
 void OpenCLProgramManager::ReleaseKernel(cl_kernel kernel) {
+  ZoneScopedN("OpenCLProgramManager::ReleaseKernel");
   auto rc = DerefKernel(kernel);
   if (rc == 0) {
     EvictKernel(kernel);

@@ -16,6 +16,7 @@ using ProgramKey = uint64_t;
 using KernelKey = std::pair<cl_program, std::string>;
 
 inline ProgramKey GetProgramKey(std::string_view full_src) {
+  ZoneScopedN("GetProgramKey");
   return std::hash<decltype(full_src)>{}(full_src);
 }
 

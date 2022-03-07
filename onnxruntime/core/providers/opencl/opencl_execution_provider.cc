@@ -245,6 +245,7 @@ void OpenCLExecutionProvider::RegisterAllocator(std::shared_ptr<AllocatorManager
 }
 
 IAllocatorUniquePtrToClMem OpenCLExecutionProvider::GetScratchBuffer(size_t nbytes) const {
+  ZoneScopedN("OpenCLExecutionProvider::GetScratchBuffer");
   auto alloc = GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_BUFFER);
   return {
       static_cast<cl_mem>(alloc->Alloc(nbytes)),
@@ -254,6 +255,7 @@ IAllocatorUniquePtrToClMem OpenCLExecutionProvider::GetScratchBuffer(size_t nbyt
 }
 
 IAllocatorUniquePtrToClMem OpenCLExecutionProvider::GetScratchImage2D(const opencl::Image2DDesc& desc) const {
+  ZoneScopedN("OpenCLExecutionProvider::GetScratchImage2D");
   auto base_alloc = GetAllocator(0, (OrtMemType)opencl::CLMemType::OPENCL_IMAGE_2D);
   auto* alloc = static_cast<opencl::OpenCLImage2DAllocator*>(base_alloc.get());
   return {
@@ -291,6 +293,7 @@ namespace {
 }  // namespace
 
 void OpenCLExecutionProvider::InitCopyKernels() {
+  ZoneScopedN("OpenCLExecutionProvider::InitCopyKernels");
   copy_kernels_ = std::make_unique<opencl::OpenCLKernelHolder>(GetProgramManager());
   copy_kernels_->LoadProgram(copy_tensors_src, copy_tensors_src_len);
   copy_kernels_->LoadKernel("CopyBuffer1DToImage2D");
