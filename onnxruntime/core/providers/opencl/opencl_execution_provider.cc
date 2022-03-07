@@ -96,6 +96,15 @@ OpenCLExecutionProvider::OpenCLExecutionProvider(OpenCLExecutionProvider&& provi
   std::swap(dev_, provider.dev_);
   std::swap(ctx_, provider.ctx_);
   std::swap(cmd_queue_, provider.cmd_queue_);
+
+  std::swap(use_fp16_, provider.use_fp16_);
+  std::swap(flush_after_launch_, provider.flush_after_launch_);
+
+  std::swap(copy_kernels_, provider.copy_kernels_);
+
+#ifdef TRACY_ENABLE
+  std::swap(tracy_cl_ctx_, provider.tracy_cl_ctx_);
+#endif
 }
 
 OpenCLExecutionProvider::~OpenCLExecutionProvider() {
