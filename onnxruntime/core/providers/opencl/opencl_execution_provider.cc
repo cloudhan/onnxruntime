@@ -3,7 +3,7 @@
 
 #include "opencl_execution_provider.h"
 #include "opencl_allocator.h"
-#include "opencl_kernel_holder.h"
+#include "opencl_program_manager.h"
 #include "opencl_data_transfer.h"
 #include "core/common/logging/logging.h"
 #include "core/framework/kernel_registry.h"
@@ -86,6 +86,9 @@ OpenCLExecutionProvider::OpenCLExecutionProvider(const OpenCLExecutionProviderIn
   }
 #endif
   ORT_THROW_IF_ERROR(InitOpenCLContext());
+  program_manager_ = std::make_unique<opencl::OpenCLProgramManager>(this);
+  InitCopyKernels();
+
 #ifdef TRACY_ENABLE
   tracy_cl_ctx_ = TracyCLContext(ctx_, dev_);
 #endif
@@ -100,6 +103,7 @@ OpenCLExecutionProvider::OpenCLExecutionProvider(OpenCLExecutionProvider&& provi
   std::swap(use_fp16_, provider.use_fp16_);
   std::swap(flush_after_launch_, provider.flush_after_launch_);
 
+  std::swap(program_manager_, provider.program_manager_);
   std::swap(copy_kernels_, provider.copy_kernels_);
 
 #ifdef TRACY_ENABLE
@@ -108,6 +112,8 @@ OpenCLExecutionProvider::OpenCLExecutionProvider(OpenCLExecutionProvider&& provi
 }
 
 OpenCLExecutionProvider::~OpenCLExecutionProvider() {
+  // FIXME: kernel manager should release all managed kernels and programs
+
 #ifdef TRACY_ENABLE
   TracyCLCollect(tracy_cl_ctx_);
   TracyCLDestroy(tracy_cl_ctx_);
@@ -140,7 +146,8 @@ Status OpenCLExecutionProvider::InitOpenCLContext() {
     ORT_RETURN_IF_CL_ERROR(clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, vendor.size(), vendor.data(), nullptr));
     std::cout << "[CL] platform vendor: " << vendor << "\n";
     if (vendor == "Oclgrind") {
-      std::cout << "[CL] platform " << vendor << " selected" << "\n";
+      std::cout << "[CL] platform " << vendor << " selected"
+                << "\n";
       selected_platform_idx = 1;
       break;
     }
@@ -196,8 +203,6 @@ Status OpenCLExecutionProvider::InitOpenCLContext() {
   cmd_queue_ = clCreateCommandQueue(ctx_, dev_, /*properties=*/0, &err);
 #endif
   ORT_RETURN_IF_CL_ERROR(err);
-
-  InitCopyKernels();
 
   return Status::OK();
 }
@@ -265,6 +270,14 @@ Status OpenCLExecutionProvider::AfterCLLaunch() const {
   return Status::OK();
 }
 
+const opencl::OpenCLProgramManager* OpenCLExecutionProvider::GetProgramManager() const {
+  return program_manager_.get();
+}
+
+opencl::OpenCLProgramManager* OpenCLExecutionProvider::GetProgramManager() {
+  return program_manager_.get();
+}
+
 /*
 #pragma region IDataTransfer related code
 */
@@ -278,8 +291,8 @@ namespace {
 }  // namespace
 
 void OpenCLExecutionProvider::InitCopyKernels() {
-  copy_kernels_ = std::make_unique<opencl::OpenCLKernelHolder>();
-  copy_kernels_->LoadProgram(this, copy_tensors_src, copy_tensors_src_len);
+  copy_kernels_ = std::make_unique<opencl::OpenCLKernelHolder>(GetProgramManager());
+  copy_kernels_->LoadProgram(copy_tensors_src, copy_tensors_src_len);
   copy_kernels_->LoadKernel("CopyBuffer1DToImage2D");
   copy_kernels_->LoadKernel("CopyBuffer2DToImage2D");
   copy_kernels_->LoadKernel("CopyImage2DToBuffer1D");
