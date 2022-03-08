@@ -1,5 +1,7 @@
 #include "opencl_program_manager.h"
 
+#include "core/framework/murmurhash3.h"
+
 namespace onnxruntime {
 namespace opencl {
 
@@ -49,69 +51,76 @@ std::string GetFullSource(std::string_view src_body, bool use_fp16) {
   return oss.str();
 }
 
-cl_program CreateProgramWithSource(cl_context ctx, cl_device_id dev, std::string_view src) {
+Status CreateProgramWithSource(cl_context ctx, cl_device_id dev, std::string_view src, cl_program* program) {
   cl_int err{};
   const auto* data = src.data();
   const auto size = src.size();
-  cl_program program;
   {
     ZoneScopedN("clCreateProgramWithSource");
-    program = clCreateProgramWithSource(ctx, 1, &data, &size, &err);
+    *program = clCreateProgramWithSource(ctx, 1, &data, &size, &err);
   }
-  ORT_THROW_IF_CL_ERROR(err);
+  ORT_RETURN_IF_CL_ERROR(err);
 
   // Specially handle this error, we need compiler error message here.
   {
     ZoneScopedN("clBuildProgram");
-    err = clBuildProgram(program, 1, &dev, "", nullptr, nullptr);
+    err = clBuildProgram(*program, 1, &dev, "", nullptr, nullptr);
   }
   if (err != CL_SUCCESS) {
     size_t ret_size;
-    clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &ret_size);
+    clGetProgramBuildInfo(*program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &ret_size);
     std::string log(ret_size + 1, '\0');
-    clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, log.size(), log.data(), nullptr);
+    clGetProgramBuildInfo(*program, dev, CL_PROGRAM_BUILD_LOG, log.size(), log.data(), nullptr);
     LOGS_DEFAULT(ERROR) << "\nKernel Source:>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n"
                         << src
                         << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n"
                         << "\nBuild Log:\n"
                         << log
                         << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n";
-    ORT_THROW("\nOpenCL Error Code  : ", static_cast<int>(err), "\n       Error String: ", onnxruntime::opencl::GetErrorString(err));
+    return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL,
+                           "\nOpenCL Error Code  : ", static_cast<int>(err),
+                           "\n       Error String: ", onnxruntime::opencl::GetErrorString(err));
   }
-  return program;
+  return Status::OK();
 }
 
-cl_kernel LoadKernelFromProgram(cl_program program, std::string_view name) {
+Status LoadKernelFromProgram(cl_program program, std::string_view name, cl_kernel* kernel) {
   cl_int err{};
-  cl_kernel kernel;
   {
     ZoneScopedN("clCreateKernel");
-    kernel = clCreateKernel(program, std::string{name}.c_str(), &err);
+    // TODO: try out clCreateKernelsInProgram for batch kernel creation, to see
+    // if it will be faster.
+    *kernel = clCreateKernel(program, std::string{name}.c_str(), &err);
   }
-  ORT_THROW_IF_CL_ERROR(err);
-  return kernel;
+  ORT_RETURN_IF_CL_ERROR(err, "clCreateKernel failed to create kernel \"", name, "\" from program ", program);
+  return Status::OK();
 }
 
-inline uint64_t GetProgramKeyFromFullSource(const std::string_view full_src) {
-  std::hash<std::string_view> h{};
-  return h(full_src);
+inline std::array<uint32_t, 4> GetProgramKeyFromFullSource(const std::string_view full_src) {
+  ZoneScopedN("GetProgramKeyFromFullSource");
+  std::array<uint32_t, 4> hash{0,0,0,0};
+  MurmurHash3::x86_128(full_src.data(), full_src.length(), hash[0], hash.data());
+  return hash;
 }
 
 cl_program OpenCLProgramManager::GetProgram(std::string_view src_body) {
   ZoneScopedN("OpenCLProgramManager::GetProgram");
   auto full_src = GetFullSource(src_body, exec_->UseFp16());
-  auto key = GetProgramKey(full_src);
+  auto key = GetProgramKeyFromFullSource(full_src);
 
   const auto& it = program_registry_.find(key);
   if (it != program_registry_.cend()) {
     cl_program program = it->second;
-    LOGS_DEFAULT(INFO) << "[CL] Program " << program << " reused";
+    VLOGS_DEFAULT(1) << "[CL] Program " << program << " reused";
     RefProgram(program);
     return program;
   }
 
-  cl_program program = CreateProgramWithSource(exec_->GetOpenCLContext(), exec_->GetOpenCLDevice(), full_src);
-  LOGS_DEFAULT(INFO) << "[CL] Program " << program << " created from source";
+  // TODO: try out clCreateProgramWithBinary with disk cache to see if it  will
+  // be faster.
+  cl_program program;
+  ORT_THROW_IF_ERROR(CreateProgramWithSource(exec_->GetOpenCLContext(), exec_->GetOpenCLDevice(), full_src, &program));
+  VLOGS_DEFAULT(1) << "[CL] Program " << program << " created from source";
   TakeinProgram(key, program);
   return program;
 }
@@ -130,14 +139,15 @@ cl_kernel OpenCLProgramManager::GetKernel(cl_program program, std::string_view k
   KernelKey key{program, kernel_name};
   const auto& it = kernel_registry_.find(key);
   if (it != kernel_registry_.cend()) {
-    LOGS_DEFAULT(INFO) << "[CL] Reusing kernel " << kernel_name << " of program " << program;
+    VLOGS_DEFAULT(1) << "[CL] Reusing kernel " << kernel_name << " of program " << program;
     cl_kernel kernel = it->second;
     RefKernel(kernel);
     return kernel;
   }
 
-  LOGS_DEFAULT(INFO) << "[CL] Loading kernel " << kernel_name << " from program " << program;
-  cl_kernel kernel = LoadKernelFromProgram(program, kernel_name);
+  VLOGS_DEFAULT(1) << "[CL] Loading kernel " << kernel_name << " from program " << program;
+  cl_kernel kernel;
+  ORT_THROW_IF_ERROR(LoadKernelFromProgram(program, kernel_name, &kernel));
   TakeinKernel(key, kernel);
   return kernel;
 }

@@ -12,16 +12,24 @@
 namespace onnxruntime {
 namespace opencl {
 
-using ProgramKey = uint64_t;
+using ProgramKey = std::array<uint32_t, 4>;
 using KernelKey = std::pair<cl_program, std::string>;
-
-inline ProgramKey GetProgramKey(std::string_view full_src) {
-  ZoneScopedN("GetProgramKey");
-  return std::hash<decltype(full_src)>{}(full_src);
-}
 
 }  // namespace opencl
 }  // namespace onnxruntime
+
+template <>
+struct std::hash<onnxruntime::opencl::ProgramKey> {
+  size_t operator()(const onnxruntime::opencl::ProgramKey& key) const {
+    std::hash<uint32_t> h{};
+    auto v = 0;
+    v = onnxruntime::opencl::HashCombine(v, h(key[0]));
+    v = onnxruntime::opencl::HashCombine(v, h(key[1]));
+    v = onnxruntime::opencl::HashCombine(v, h(key[2]));
+    v = onnxruntime::opencl::HashCombine(v, h(key[3]));
+    return v;
+  }
+};
 
 template <>
 struct std::hash<onnxruntime::opencl::KernelKey> {
@@ -60,9 +68,14 @@ Why not use C++ wrapper to deal with cl::Program and cl::Kernel lifetime mgmt?
 
 We need to cache program and kerenl instance for reusing (compiling on mobile
 platform is slow), that is, we are holding at least one reference to each of
-these objects. But there is no way to query the value of reference counter. So
-there is no reliable way for releasing them. So we take over the mgmt all at
-once.
+these objects. But there is no way to reliablely query the value of reference
+counter[1]. We also need a central manager for identifing the program by source
+and retrieving the already created program instance. So we take over the mgmt
+all at once.
+
+[1]: The reference count returned should be considered immediately stale. It is
+unsuitable for general use in applications. This feature is provided for
+identifying memory leaks.
 
 Lifetime characteristics on clReleaseProgram and clReleaseKernel
 
