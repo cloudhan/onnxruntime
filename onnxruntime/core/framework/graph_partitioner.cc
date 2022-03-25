@@ -103,7 +103,7 @@ static void AssignNodes(Graph& graph, const IndexedSubGraph& capability,
 #endif  // !defined(ORT_MINIMAL_BUILD) || defined(ORT_EXTENDED_MINIMAL_BUILD)
 
 static Status GetCapabilityForEP(Graph& graph, KernelRegistryManager& kernel_registry_mgr, IExecutionProvider& current_ep,
-                                 GraphPartitioner::Mode mode, std::vector<std::unique_ptr<ComputeCapability>>& capabilities, 
+                                 GraphPartitioner::Mode mode, std::vector<std::unique_ptr<ComputeCapability>>& capabilities,
                                  TransformLayoutFunction transform_layout) {
   {
     GraphViewer graph_viewer(graph);
@@ -565,10 +565,11 @@ static Status PartitionOrtFormatModelImpl(Graph& graph, FuncManager& func_mgr,
     auto kernel_def = builder.Build();
 
     // save hash so SessionState can find the kernel. each kernel name should be unique
-    if (compiled_kernel_hashes.insert({metadef.name, kernel_def->GetHash()}).second == false) {
-      ORT_THROW("Existing entry in compiled kernel hashes for ", metadef.name,
-                ". Execution Provider must generate unique names across the entire model.");
-    }
+    // FIXME:
+    // if (compiled_kernel_hashes.insert({metadef.name, kernel_def->GetHash()}).second == false) {
+    //   ORT_THROW("Existing entry in compiled kernel hashes for ", metadef.name,
+    //             ". Execution Provider must generate unique names across the entire model.");
+    // }
 
     ORT_RETURN_IF_ERROR(fused_kernel_registry.Register(
         KernelCreateInfo(std::move(kernel_def),
@@ -597,9 +598,9 @@ Status GraphPartitioner::PartitionOrtFormatModel(
   // process full graph with each EP
   for (const auto& ep : providers_) {
     if (ep->Type() == kCpuExecutionProvider
-#ifdef USE_OPENCL
-        || ep->Type() == kOpenCLExecutionProvider
-#endif
+// #ifdef USE_OPENCL
+//         || ep->Type() == kOpenCLExecutionProvider
+// #endif
     ) {
       // hash for kernel is stored in session state for EPs that have pre-registered kernels
       // (vs. runtime fused kernels) so nothing to do here.
@@ -614,7 +615,7 @@ Status GraphPartitioner::PartitionOrtFormatModel(
   return Status::OK();
 }
 
-Status GraphPartitioner::Partition(Graph& graph, bool export_dll, FuncManager& func_mgr, 
+Status GraphPartitioner::Partition(Graph& graph, bool export_dll, FuncManager& func_mgr,
                                    TransformLayoutFunction transform_layout_function, Mode mode,
                                    std::unordered_map<std::string, HashValue>* compiled_kernel_hashes) const {
   // It is a greedy partitioning algorithm per provider preferences user provided when calling ONNX RUNTIME right now.

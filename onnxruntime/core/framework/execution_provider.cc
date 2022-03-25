@@ -30,8 +30,8 @@ std::vector<std::unique_ptr<ComputeCapability>>
 IExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph,
                                   const std::vector<const KernelRegistry*>& kernel_registries) const {
   std::vector<std::unique_ptr<ComputeCapability>> result;
-#if !defined(ORT_MINIMAL_BUILD)
   for (auto& node : graph.Nodes()) {
+#if !defined(ORT_MINIMAL_BUILD)
     for (auto registry : kernel_registries) {
       if (KernelRegistry::HasImplementationOf(*registry, node, Type())) {
         std::unique_ptr<IndexedSubGraph> sub_graph = std::make_unique<IndexedSubGraph>();
@@ -39,17 +39,13 @@ IExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph,
         result.push_back(std::make_unique<ComputeCapability>(std::move(sub_graph)));
         break;
       }
+#endif
+      // HasImplementationOfByHash
+      node.SinceVersion();
     }
   }
 
   return result;
-#else
-  // We have saved hashes to lookup static kernels in an ORT format model so the default behavior is to return an
-  // empty vector to leave that in place. An EP that compiles nodes can override this in a minimal build.
-  ORT_UNUSED_PARAMETER(graph);
-  ORT_UNUSED_PARAMETER(kernel_registries);
-  return result;
-#endif
 }
 
 // Returns true if an allocator was found and replaced

@@ -152,7 +152,7 @@ class Node {
   int SinceVersion() const noexcept { return since_version_; }
 
   /** Sets the since version (opset version that the Node's operator was first defined in.) for this node.
-  @remarks Used during layout transformation for setting since vesion for layout transformed nodes with 
+  @remarks Used during layout transformation for setting since vesion for layout transformed nodes with
   domain kMSNHWC.
   */
   void SetSinceVersion(int since_version) noexcept { since_version_ = since_version; }
@@ -483,6 +483,9 @@ class Node {
   Status LoadFromOrtFormat(const onnxruntime::fbs::Node& fbs_node, const logging::Logger& logger);
   Status LoadEdgesFromOrtFormat(const onnxruntime::fbs::NodeEdge& fbs_node_edgs, const Graph& graph);
 
+  void SetHash(HashValue hash);
+  HashValue GetHash() const;
+
   /**
   @class Definitions
   The input and output definitions for this Node.
@@ -633,6 +636,9 @@ class Node {
 
   // Graph instances for subgraphs that are owned by this Node
   std::vector<std::unique_ptr<Graph>> subgraphs_;
+
+  // hash value for kernel def
+  std::optional<HashValue> kernel_def_hash_;
 };
 
 /**

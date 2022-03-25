@@ -20,6 +20,14 @@ class KernelDefBuilder;
 
 typedef std::map<size_t, OrtMemType> MemTypeMap;
 
+using TypeConstraintsMap = std::map<std::string, std::vector<MLDataType>>;
+
+using ConstraintTypes = std::map<std::string, MLDataType>;
+
+onnxruntime::HashValue CalculateHash(const std::string& op_name, const std::string& op_domain, int since_version_start, const ConstraintTypes& types);
+std::unordered_set<onnxruntime::HashValue> CalculateHash(const std::string& op_name, const std::string& op_domain, int since_version_start, const TypeConstraintsMap& type_constraints);
+
+
 class KernelDef {
  private:
   // note that input/output might be on CPU implicitly when the node is from CPU execution provider
@@ -54,12 +62,12 @@ class KernelDef {
   }
 
   // type constraints with types supported by default
-  const std::map<std::string, std::vector<MLDataType>>& TypeConstraints() const {
+  const TypeConstraintsMap& TypeConstraints() const {
     return default_type_constraints_;
   }
 
   // type constraints with types supported in this build
-  const std::map<std::string, std::vector<MLDataType>>& EnabledTypeConstraints() const {
+  const TypeConstraintsMap& EnabledTypeConstraints() const {
     return enabled_type_constraints_;
   }
 
@@ -108,18 +116,18 @@ class KernelDef {
 
   bool IsConflict(const KernelDef& other) const;
 
-  HashValue GetHash() const noexcept {
+  const std::unordered_set<HashValue>& GetHashes() const noexcept {
     // if we need to support different hash versions we can update CalculateHash to take a version number
     // and calculate any non-default versions dynamically. we only use this during kernel lookup so
     // it's not performance critical
-    return hash_;
+    return hashes_;
   }
 
  private:
   friend class KernelDefBuilder;
 
   // called once by KernelDefBuilder::Build
-  void CalculateHash();
+  void CalculateHashes();
 
   // The operator name supported by <*this> kernel..
   std::string op_name_;
@@ -143,14 +151,14 @@ class KernelDef {
   // note: std::map as we need the order to be deterministic for the hash
   // Note: default_type_constraints_ are used to calculate the kernel hash so that the hash is
   // stable across builds with and without kernel type reduction enabled.
-  std::map<std::string, std::vector<MLDataType>> default_type_constraints_;
+  TypeConstraintsMap default_type_constraints_;
 
   // the type constraints that are supported in this build (enabled) for the kernel
-  std::map<std::string, std::vector<MLDataType>> enabled_type_constraints_;
+  TypeConstraintsMap enabled_type_constraints_;
 
   // optional alternate type constraints to use to calculate the hash instead of default_type_constraints_
   // note: this provides a way to update the default type constraints while preserving the hash value
-  optional<std::map<std::string, std::vector<MLDataType>>> hash_type_constraints_;
+  optional<TypeConstraintsMap> hash_type_constraints_;
 
   // An element <i, j> means that output j reuses the memory of input i.
   std::vector<std::pair<int, int>> inplace_map_;
@@ -187,8 +195,8 @@ class KernelDef {
   // Default memory type for all outputs
   OrtMemType default_outputs_mem_type_{OrtMemTypeDefault};
 
-  // hash of kernel definition for lookup in minimal build
-  HashValue hash_ = 0;
+  // hash values of kernel definition for lookup in minimal build
+  std::unordered_set<HashValue> hashes_{};
 };
 
 class KernelDefBuilder {
@@ -392,7 +400,7 @@ class KernelDefBuilder {
      Return the kernel definition, passing ownership of the KernelDef to the caller
   */
   std::unique_ptr<KernelDef> Build() {
-    kernel_def_->CalculateHash();
+    kernel_def_->CalculateHashes();
     return std::move(kernel_def_);
   }
 

@@ -805,6 +805,15 @@ Status Node::LoadEdgesFromOrtFormat(const onnxruntime::fbs::NodeEdge& fbs_node_e
   return Status::OK();
 }
 
+void Node::SetHash(HashValue hash) {
+  ORT_ENFORCE(!kernel_def_hash_.has_value(), "");
+  kernel_def_hash_ = hash;
+}
+
+HashValue Node::GetHash() const {
+  return kernel_def_hash_.value();
+}
+
 #if !defined(ORT_MINIMAL_BUILD) || defined(ORT_EXTENDED_MINIMAL_BUILD)
 void Node::Init(const std::string& name,
                 const std::string& op_type,

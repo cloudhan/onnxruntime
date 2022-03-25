@@ -917,7 +917,8 @@ Status SessionState::SaveToOrtFormat(flatbuffers::FlatBufferBuilder& builder,
   kernel_def_hashes.reserve(size);
   for (const auto& kvp : kernel_create_info_map_) {
     node_indices.push_back(gsl::narrow<uint32_t>(kvp.first));
-    kernel_def_hashes.push_back(kvp.second->kernel_def->GetHash());
+    auto node = graph_viewer_->GetNode(kvp.first);
+    kernel_def_hashes.push_back(node->GetHash());
   }
 
   auto kernels = fbs::CreateKernelCreateInfosDirect(builder, &node_indices, &kernel_def_hashes);
@@ -973,8 +974,9 @@ Status SessionState::LoadFromOrtFormat(const fbs::SessionState& fbs_session_stat
   const FbsSessionStateViewer fbs_session_state_viewer{fbs_session_state};
   ORT_RETURN_IF_ERROR(fbs_session_state_viewer.Validate());
 
-  auto add_kernel_by_hash =
-      [&kernel_registry_manager, this](const Node& node, HashValue hash) {
+  auto add_hash_and_kernel =
+      [&kernel_registry_manager, this](Node& node, HashValue hash) {
+        node.SetHash(hash);
         const KernelCreateInfo* kci = nullptr;
         utils::UpdateHashForBackwardsCompatibility(hash);
 
@@ -1003,27 +1005,27 @@ Status SessionState::LoadFromOrtFormat(const fbs::SessionState& fbs_session_stat
       continue;
     }
 
-    ORT_RETURN_IF_ERROR(add_kernel_by_hash(*node, node_kernel_info.kernel_def_hash));
+    ORT_RETURN_IF_ERROR(add_hash_and_kernel(*node, node_kernel_info.kernel_def_hash));
   }
 
 #if !defined(ORT_MINIMAL_BUILD) || defined(ORT_EXTENDED_MINIMAL_BUILD)
   // process the nodes that were added by replaying any loaded runtime optimizations
   for (const auto& [node_index, kernel_def_hash] :
        graph_.RuntimeOptimizationReplayCtx().produced_node_index_to_kernel_def_hash) {
-    const auto* node = graph_.GetNode(node_index);
+    auto* node = graph_.GetNode(node_index);
 
     // NHWC optimizer may replace a node, so a missing node isn't necessarily an error
     // ORT_RETURN_IF(node == nullptr, "Can't find runtime optimization produced node with index ", node_index);
 
     if (node != nullptr) {
-      ORT_RETURN_IF_ERROR(add_kernel_by_hash(*node, kernel_def_hash));
+      ORT_RETURN_IF_ERROR(add_hash_and_kernel(*node, kernel_def_hash));
     }
   }
 
   // lookup the hashes for any nodes we compiled or added during graph partitioning.
   // These node indexes for compiled nodes as well as newly added nodes are not in node_indices
   // as they were created at runtime.
-  for (const auto& node : graph_.Nodes()) {
+  for (auto& node : graph_.Nodes()) {
     if (kernel_create_info_map_.count(node.Index()) == 0) {
       if (node.Domain() == kOnnxDomain || node.Domain() == kOnnxDomainAlias || node.Domain() == kMSDomain) {
         // two possible places to get hash from
@@ -1033,7 +1035,7 @@ Status SessionState::LoadFromOrtFormat(const fbs::SessionState& fbs_session_stat
         }
 
         if (kernel_hash.has_value()) {
-          ORT_RETURN_IF_ERROR(add_kernel_by_hash(node, *kernel_hash));
+          ORT_RETURN_IF_ERROR(add_hash_and_kernel(node, *kernel_hash));
         } else {
           return ORT_MAKE_STATUS(ONNXRUNTIME, FAIL, "Unable to find kernel hash for node:", node.Name(), " optype:", node.OpType());
         }
@@ -1041,7 +1043,7 @@ Status SessionState::LoadFromOrtFormat(const fbs::SessionState& fbs_session_stat
         const auto hash_info = compiled_kernel_hashes.find(node.OpType());
         ORT_RETURN_IF(hash_info == compiled_kernel_hashes.cend(),
                       "Unable to find compiled kernel hash for node '", node.Name(), "'.");
-        ORT_RETURN_IF_ERROR(add_kernel_by_hash(node, hash_info->second));
+        ORT_RETURN_IF_ERROR(add_hash_and_kernel(node, hash_info->second));
       }
     }
   }

@@ -14,7 +14,7 @@
 namespace onnxruntime {
 namespace {
 
-//assume start1 <= end1, start2 <= end2
+// assume start1 <= end1, start2 <= end2
 constexpr inline bool AreIntervalsOverlap(int start1, int end1, int start2, int end2) {
   return start1 <= end2 && start2 <= end1;
 }
@@ -31,21 +31,20 @@ inline bool AreVectorsOverlap(const std::vector<T>& v1, const std::vector<T>& v2
 
 }  // namespace
 
-void KernelDef::CalculateHash() {
-  uint32_t hash[4] = {0, 0, 0, 0};
-
+onnxruntime::HashValue CalculateHash(const std::string& op_name, const std::string& op_domain, int since_version_start, const ConstraintTypes& types) {
+  std::array<uint32_t, 4> hash = {0, 0, 0, 0};
   auto hash_int = [&hash](int i) { MurmurHash3::x86_128(&i, sizeof(i), hash[0], &hash); };
   auto hash_str = [&hash](const std::string& str) {
     MurmurHash3::x86_128(str.data(), gsl::narrow_cast<int32_t>(str.size()), hash[0], &hash);
   };
 
-  // use name, start/end, domain, provider and the type constraints.
+  // use name, start/end, domain, the type constraints.
   // we wouldn't have two kernels that only differed by the inplace or alias info or memory types.
   // currently nothing sets exec_queue_id either (and would assumably be a runtime thing and not part of the base
   // kernel definition)
 
-  hash_str(op_name_);
-  hash_int(op_since_version_start_);
+  hash_str(op_name);
+  hash_int(since_version_start);
 
   // If we include op_since_version_end_ the hash of an existing op changes when it's superseded.
   // e.g. Unsqueeze 11 had no end version until Unsqueeze 13, at which point the existing op is changed to have
@@ -53,25 +52,62 @@ void KernelDef::CalculateHash() {
   // previously serialized ORT format model wouldn't find the kernel. In order to select the kernel to include
   // in the ORT model the full OpSchema info is used, so it's safe to exclude op_since_version_end_ from the hash.
 
-  hash_str(op_domain_);
-  hash_str(provider_type_);
+  hash_str(op_domain);
 
-  // use the hash_type_constraints_ or default_type_constraints_ list for the hash so the value in an ORT format model
-  // is stable.
-  const auto& hash_type_constraints =
-      hash_type_constraints_.has_value() ? *hash_type_constraints_ : default_type_constraints_;
-  for (const auto& key_value : hash_type_constraints) {
-    hash_str(key_value.first);
-    auto data_type_strings = DataTypeImpl::ToString(key_value.second);
-    // sort type constraint data type strings so that order does not matter
-    std::sort(data_type_strings.begin(), data_type_strings.end());
-    for (const auto& data_type_string : data_type_strings) {
-      hash_str(data_type_string);
-    }
+  std::vector<std::string> type_names;
+  std::for_each(types.cbegin(), types.cend(),
+                [&](const auto& kv) { return type_names.emplace_back(kv.first); });
+  std::sort(type_names.begin(), type_names.end());
+
+  for (const auto& type_name : type_names) {
+    hash_str(DataTypeImpl::ToString(types.at(type_name)));
   }
 
-  hash_ = hash[0] & 0xfffffff8;  // save low 3 bits for hash version info in case we need it in the future
-  hash_ |= uint64_t(hash[1]) << 32;
+  // save low 3 bits for hash version info in case we need it in the future
+  onnxruntime::HashValue value = hash[0] & 0xfffffff8;
+  value |= uint64_t(hash[1]) << 32;
+  return value;
+}
+
+void CalculateHashForEachTypeConstraintsCombination(
+    const std::string& op_name, const std::string& op_domain, int since_version_start,
+    const TypeConstraintsMap& type_constraints, const std::vector<std::string>& type_names, size_t type_names_index,
+    ConstraintTypes& types, std::unordered_set<onnxruntime::HashValue>& out) {
+  if (type_names_index == type_names.size()) {
+    auto hash_value = CalculateHash(op_name, op_domain, since_version_start, types);
+    // Hash collision is benign here. We then use kernel hash to find kernel impl, if they refer to same
+    // kernel impl then hash collision will have no effect.
+    out.insert(hash_value);
+    return;
+  }
+
+  const std::string& type_name = type_names[type_names_index];
+  for (const auto& t : type_constraints.at(type_name)) {
+    types[type_name] = t;
+    CalculateHashForEachTypeConstraintsCombination(op_name, op_domain, since_version_start,
+                                                   type_constraints, type_names, type_names_index + 1, types, out);
+  }
+}
+
+std::unordered_set<onnxruntime::HashValue> CalculateHash(
+    const std::string& op_name, const std::string& op_domain, int since_version_start,
+    const TypeConstraintsMap& type_constraints) {
+  std::vector<std::string> type_names;
+  std::for_each(type_constraints.cbegin(), type_constraints.cend(),
+                [&](const auto& kv) { return type_names.emplace_back(kv.first); });
+
+  ConstraintTypes types;
+  std::unordered_set<onnxruntime::HashValue> out;
+  CalculateHashForEachTypeConstraintsCombination(op_name, op_domain, since_version_start,
+                                                 type_constraints, type_names, 0, types, out);
+
+  return out;
+}
+
+void KernelDef::CalculateHashes() {
+  const auto& hash_type_constraints =
+      hash_type_constraints_.has_value() ? *hash_type_constraints_ : default_type_constraints_;
+  hashes_ = CalculateHash(op_name_, op_domain_, op_since_version_start_, hash_type_constraints);
 }
 
 // TODO: Tell user why it has conflicts

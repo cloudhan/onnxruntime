@@ -1567,6 +1567,11 @@ common::Status InferenceSession::Initialize() {
       }
 
       if (saving_ort_format) {
+        for(auto& node : graph.Nodes()) {
+          #error NotImplemented!
+          // auto hash = CalculateHash(node.OpType(), node.Domain(), node.SinceVersion(), node.Op()..);
+          // node->SetHash(0);
+        }
         ORT_RETURN_IF_ERROR_SESSIONID_(SaveToOrtFormat(session_options_.optimized_model_filepath));
       } else {
         ORT_RETURN_IF_ERROR_SESSIONID_(Model::Save(*model_, session_options_.optimized_model_filepath));

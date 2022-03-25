@@ -111,16 +111,17 @@ TEST(KernelRegistryTests, TryFindKernelByHash) {
           .SinceVersion(6)
           .Provider(kCpuExecutionProvider)
           .Build();
-  const auto kernel_def_hash = kernel_def->GetHash();
-  std::vector<std::unique_ptr<KernelDef>> function_table{};
-  function_table.emplace_back(std::move(kernel_def));
   KernelRegistry r{};
-  ASSERT_STATUS_OK(RegKernels(r, function_table, CreateFakeKernel));
+  for (auto kernel_def_hash: kernel_def->GetHashes()) {
+    std::vector<std::unique_ptr<KernelDef>> function_table{};
+    function_table.emplace_back(std::move(kernel_def));
+    ASSERT_STATUS_OK(RegKernels(r, function_table, CreateFakeKernel));
 
-  const KernelCreateInfo* pkci = nullptr;
-  ASSERT_TRUE(r.TryFindKernelByHash(kernel_def_hash, &pkci));
+    const KernelCreateInfo* pkci = nullptr;
+    ASSERT_TRUE(r.TryFindKernelByHash(kernel_def_hash, &pkci));
+  }
 
-  const auto unregistered_kernel_def_hash =
+  const auto unregistered_kernel_def_hashes =
       KernelDefBuilder()
           .MayInplace(0, 0)
           .TypeConstraint("T", DataTypeImpl::GetTensorType<float>())
@@ -129,8 +130,11 @@ TEST(KernelRegistryTests, TryFindKernelByHash) {
           .SinceVersion(1)  // different from registered kernel
           .Provider(kCpuExecutionProvider)
           .Build()
-          ->GetHash();
-  ASSERT_FALSE(r.TryFindKernelByHash(unregistered_kernel_def_hash, &pkci));
+          ->GetHashes();
+  for (auto hash: unregistered_kernel_def_hashes) {
+    const KernelCreateInfo* pkci = nullptr;
+    ASSERT_FALSE(r.TryFindKernelByHash(hash, &pkci));
+  }
 }
 
 }  // namespace onnxruntime::test
