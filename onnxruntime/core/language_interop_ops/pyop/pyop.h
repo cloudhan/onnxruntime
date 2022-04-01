@@ -4,7 +4,7 @@
 #include "core/framework/ort_value.h"
 #include "core/session/onnxruntime_cxx_api.h"
 #include "core/framework/op_kernel_context_internal.h"
-#include <iostream>
+#include <iosfwd>
 #include <vector>
 #include <unordered_map>
 #ifdef _WIN32

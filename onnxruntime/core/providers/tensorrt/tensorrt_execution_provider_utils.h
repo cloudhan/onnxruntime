@@ -4,7 +4,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <string>
-#include <iostream>
+#include <iosfwd>
 #include <experimental/filesystem>
 #include "flatbuffers/idl.h"
 #include "ort_trt_int8_cal_table.fbs.h"
@@ -167,7 +167,7 @@ std::string GetCachePath(const std::string& root, const std::string& name) {
 /*
  * Get cache by type
  *
- * \param root root path of the cache  
+ * \param root root path of the cache
  * \param file_extension It could be ".engine", ".profile" or ".timing"
 */
 std::vector<fs::path> GetCachesByType(const std::string& root, std::string file_extension) {

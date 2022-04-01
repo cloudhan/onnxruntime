@@ -4,7 +4,7 @@
 #pragma once
 #include <cassert>
 #include <iomanip>
-#include <iostream>
+#include <iosfwd>
 #include <string>
 #include <vector>
 

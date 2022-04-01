@@ -51,7 +51,7 @@ std::wstring ToWideString(const std::string& s) {
 
 #ifdef ORT_NO_EXCEPTIONS
 void PrintFinalMessage(const char* msg) {
-#if defined(__ANDROID__)
+#if defined(ANDROID) || defined(__ANDROID__)
   __android_log_print(ANDROID_LOG_ERROR, "onnxruntime", "%s", msg);
 #else
   // TODO, consider changing the output of the error message from std::cerr to logging when the

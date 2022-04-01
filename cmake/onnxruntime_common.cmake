@@ -78,7 +78,7 @@ file(GLOB onnxruntime_common_src CONFIGURE_DEPENDS
 # Remove new/delete intercept. To deal with memory leaks
 # Use either non-mimalloc build OR use mimalloc built-in features.
 if(WIN32 AND onnxruntime_USE_MIMALLOC)
-    list(REMOVE_ITEM onnxruntime_common_src 
+    list(REMOVE_ITEM onnxruntime_common_src
     "${ONNXRUNTIME_ROOT}/core/platform/windows/debug_alloc.cc"
     "${ONNXRUNTIME_ROOT}/core/platform/windows/debug_alloc.h")
 endif()
@@ -110,7 +110,7 @@ endif()
 
 include(external/abseil-cpp.cmake)
 
-onnxruntime_add_include_to_target(onnxruntime_common date_interface wil)
+onnxruntime_add_include_to_target(onnxruntime_common wil)
 target_include_directories(onnxruntime_common
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${ONNXRUNTIME_ROOT} ${eigen_INCLUDE_DIRS}
     # propagate include directories of dependencies that are part of public interface

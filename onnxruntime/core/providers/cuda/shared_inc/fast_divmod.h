@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <iostream>
+#include <iosfwd>
 #include <limits>
 #include <cuda_runtime.h>
 #include <cmath>

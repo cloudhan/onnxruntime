@@ -12,7 +12,7 @@
 #include "core/providers/openvino/ibackend.h"
 
 #include <vector>
-#include <iostream>
+#include <iosfwd>
 #include <string>
 #include <condition_variable>
 #include <mutex>

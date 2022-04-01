@@ -4,7 +4,7 @@
 #pragma once
 
 #include <syslog.h>
-#include <iostream>
+#include <iosfwd>
 #include "core/common/logging/logging.h"
 #include "core/common/logging/isink.h"
 

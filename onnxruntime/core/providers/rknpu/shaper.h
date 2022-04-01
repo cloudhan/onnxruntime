@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#include <iostream>
+#include <iosfwd>
 
 namespace onnxruntime {
 namespace rknpu {

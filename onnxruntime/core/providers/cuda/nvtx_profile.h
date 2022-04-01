@@ -12,7 +12,7 @@
 
 #include <cinttypes>
 #include <cstdlib>
-#include <iostream>
+#include <iosfwd>
 #include <stdexcept>
 #include <string>
 
@@ -77,7 +77,7 @@ class RangeCreatorBase {
 
   bool IsBeginCalled() const {
     return is_begin_called_;
-  } 
+  }
 
   bool IsEndCalled() const {
     return is_end_called_;

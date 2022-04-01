@@ -16,7 +16,7 @@
 
 #include <date/date.h>
 #include <atomic>
-#include <iostream>
+#include <iosfwd>
 #include <string>
 
 #include "core/common/logging/capture.h"

@@ -2,14 +2,13 @@
 // Licensed under the MIT License.
 
 #include "core/common/logging/sinks/ostream_sink.h"
-#include "date/date.h"
 
 namespace onnxruntime {
 namespace logging {
 
-void OStreamSink::SendImpl(const Timestamp& timestamp, const std::string& logger_id, const Capture& message) {
+void OStreamSink::SendImpl(const Timestamp& /* timestamp */, const std::string& logger_id, const Capture& message) {
   // operator for formatting of timestamp in ISO8601 format including microseconds
-  using date::operator<<;
+  // using date::operator<<;
 
   // Two options as there may be multiple calls attempting to write to the same sink at once:
   // 1) Use mutex to synchronize access to the stream.
@@ -20,7 +19,7 @@ void OStreamSink::SendImpl(const Timestamp& timestamp, const std::string& logger
 
   std::ostringstream msg;
 
-  msg << timestamp << " [" << message.SeverityPrefix() << ":" << message.Category() << ":" << logger_id << ", "
+  msg /*<< timestamp*/ << " [" << message.SeverityPrefix() << ":" << message.Category() << ":" << logger_id << ", "
       << message.Location().ToString() << "] " << message.Message() << "\n";
 
   (*stream_) << msg.str();
@@ -43,7 +42,7 @@ void WOStreamSink::SendImpl(const Timestamp& timestamp, const std::string& logge
 
   std::wostringstream msg;
 
-  msg << timestamp << L" [" << message.SeverityPrefix() << L":" << message.Category() << L":" << ToWideString(logger_id) << L", "
+  msg /*<< timestamp*/ << L" [" << message.SeverityPrefix() << L":" << message.Category() << L":" << ToWideString(logger_id) << L", "
       << ToWideString(message.Location().ToString()) << L"] " << ToWideString(message.Message()) << L"\n";
 
   (*stream_) << msg.str();

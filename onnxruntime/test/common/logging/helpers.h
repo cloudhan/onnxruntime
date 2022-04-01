@@ -5,7 +5,7 @@
 
 #include <sstream>
 
-#include "date/date.h"
+// #include "date/date.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -30,11 +30,11 @@ class MockSink : public ::onnxruntime::logging::ISink {
 #endif
 
 ACTION(PrintArgs) {
-  using date::operator<<;
+  // using date::operator<<;
 
   // const Timestamp &timestamp, const std::string &logger_id, const Message &message
   //                  arg0                          arg1                        arg2
-  std::cout << arg1 << "@" << arg0 << " "
+  std::cout << arg1 << "@" /*<< arg0 <<*/ " "
             << arg2.SeverityPrefix() << ":" << arg2.Category() << ":"
             << arg2.Location().ToString(::onnxruntime::CodeLocation::kFilenameAndPath) << " " << arg2.Message() << std::endl;
 };

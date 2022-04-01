@@ -6,7 +6,7 @@
 #include <atomic>
 #include <fstream>
 #include <initializer_list>
-#include <iostream>
+#include <iosfwd>
 #include <tuple>
 
 #include "core/common/profiler_common.h"
@@ -108,7 +108,7 @@ class Profiler {
   static void SetGlobalMaxNumEvents(size_t new_max_num_events) {
     global_max_num_events_.store(new_max_num_events);
   }
-  
+
   void AddEpProfilers(std::unique_ptr<EpProfiler> ep_profiler) {
     if (ep_profiler) {
       ep_profilers_.push_back(std::move(ep_profiler));
